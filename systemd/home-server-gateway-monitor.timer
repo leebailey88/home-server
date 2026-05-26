@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Home Server web gateway health monitor periodically
+
+[Timer]
+OnBootSec={{ON_BOOT_SEC}}
+OnUnitActiveSec={{ON_UNIT_ACTIVE_SEC}}
+AccuracySec=30s
+Persistent=true
+Unit=home-server-gateway-monitor.service
+
+[Install]
+WantedBy=timers.target
