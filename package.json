@@ -1,0 +1,27 @@
+{
+  "name": "home-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=11 <12"
+  },
+  "packageManager": "pnpm@11.2.2",
+  "scripts": {
+    "render:nginx": "node scripts/render-nginx-config.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
+    "lint:shell": "bash scripts/lint-shell.sh",
+    "validate": "pnpm format:check && pnpm lint:md && pnpm lint:shell && pnpm render:nginx"
+  },
+  "dependencies": {
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "^0.18.1",
+    "prettier": "^3.6.2",
+    "prettier-plugin-sh": "^0.18.0"
+  }
+}

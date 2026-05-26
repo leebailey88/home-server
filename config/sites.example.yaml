@@ -1,0 +1,29 @@
+# Copy this file to config/sites.yaml on the NUC and edit it there.
+# Keep upstream apps bound to 127.0.0.1 only.
+
+defaults:
+  nginxListen: '127.0.0.1:80'
+  accessLogDir: '/var/log/nginx'
+  staticRootBase: '/opt/nuc-web/sites'
+
+sites:
+  - key: grizzly-bulls
+    enabled: true
+    kind: proxy
+    hostnames:
+      - nuc-grizzly.grizzlybulls.com
+      # Add these only when ready for production cutover:
+      # - grizzlybulls.com
+      # - www.grizzlybulls.com
+    upstream: http://127.0.0.1:8080
+    healthUrl: http://127.0.0.1:8080/api/health
+    notes: Grizzly Bulls Next.js app, deployed by the grizzly-bulls repo.
+
+  - key: example-static
+    enabled: false
+    kind: static
+    hostnames:
+      - example.grizzlybulls.com
+    root: /opt/nuc-web/sites/example-static/public
+    index: index.html
+    notes: Example direct static site served by Nginx.

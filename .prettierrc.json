@@ -1,0 +1,14 @@
+{
+  "plugins": ["prettier-plugin-sh"],
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 100,
+  "overrides": [
+    {
+      "files": "*.sh",
+      "options": {
+        "parser": "sh"
+      }
+    }
+  ]
+}

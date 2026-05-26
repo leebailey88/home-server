@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# local env/config
+.env
+.env.*
+!.env.example
+config/sites.yaml
+config/cloudflared.yml
+
+# generated files
+dist/
+build/
+coverage/
+.tmp/
+.cache/
+nginx/generated/
+
+# logs
+*.log
+logs/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
