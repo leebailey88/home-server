@@ -32,6 +32,9 @@ sites:
     kind: static
     hostnames:
       - example.grizzlybulls.com
-    root: /opt/nuc-web/sites/example-static/public
+    # Static deploys are atomic: scripts/deploy-static-site.mjs copies a build
+    # into deployRoot/releases/<timestamp> and points root/current at it.
+    deployRoot: /opt/nuc-web/sites/example-static
+    root: /opt/nuc-web/sites/example-static/current
     index: index.html
     notes: Example direct static site served by Nginx.

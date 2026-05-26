@@ -12,6 +12,7 @@ This repo manages the shared web gateway layer for a home-hosted NUC that runs m
 - Make site routing declarative through `config/sites.yaml`.
 - Generate Nginx and Cloudflare Tunnel config from the same site registry.
 - Provide lightweight health checks, systemd monitoring, and repeatable bootstrap scripts.
+- Support atomic static-site deploys with simple release listing and rollback.
 - Avoid interfering with the existing `money-bot` Docker instances and IB Gateway containers.
 
 ## Target architecture
@@ -27,7 +28,7 @@ Nginx on the NUC
   ↓
 localhost-bound apps and static roots
     - grizzly-bulls       127.0.0.1:8080
-    - future-static-site  /opt/nuc-web/sites/<site>/public
+    - future-static-site  /opt/nuc-web/sites/<site>/current
     - future-next-site    127.0.0.1:8081
 ```
 
@@ -48,6 +49,9 @@ scripts/
   render-cloudflared-config.mjs  Generates Cloudflare Tunnel config from sites.yaml
   install-nginx-config.sh        Installs rendered config and reloads Nginx
   install-cloudflared-config.sh  Installs rendered tunnel config and restarts cloudflared
+  deploy-static-site.mjs         Atomically deploys static site build output
+  list-static-releases.mjs       Lists static site releases and marks current
+  rollback-static-site.mjs       Moves current back to an earlier static release
   check-health.sh                Checks Nginx, cloudflared, upstreams, and host routes
   monitor-gateway.sh             Stateful monitor wrapper with optional Discord alerts
   install-monitor-service.sh     Installs the systemd monitor service/timer
@@ -57,6 +61,7 @@ docs/
   architecture.md                System design notes
   runbooks/bootstrap-nuc.md      First-host setup steps
   runbooks/monitoring.md         Gateway monitor operations
+  runbooks/static-sites.md       Static site deploy/list/rollback operations
 ```
 
 ## Quick start
@@ -99,6 +104,14 @@ On the NUC, once this repo is cloned:
 sudo bash scripts/bootstrap-nuc.sh
 sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/install-nginx-config.sh
 sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/check-health.sh
+```
+
+To deploy a static site build:
+
+```bash
+pnpm static:deploy example-static /path/to/build-output --keep=5
+pnpm static:list example-static
+pnpm static:rollback example-static <release-name>
 ```
 
 To install the optional repeating gateway monitor:
