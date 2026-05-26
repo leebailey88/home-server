@@ -9,12 +9,14 @@
   },
   "packageManager": "pnpm@11.2.2",
   "scripts": {
+    "validate:sites": "node scripts/validate-sites-config.mjs",
     "render:nginx": "node scripts/render-nginx-config.mjs",
+    "render:cloudflared": "node scripts/render-cloudflared-config.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
     "lint:shell": "bash scripts/lint-shell.sh",
-    "validate": "pnpm format:check && pnpm lint:md && pnpm lint:shell && pnpm render:nginx"
+    "validate": "pnpm format:check && pnpm lint:md && pnpm lint:shell && pnpm validate:sites && pnpm render:nginx && pnpm render:cloudflared"
   },
   "dependencies": {
     "yaml": "^2.8.1"
