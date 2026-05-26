@@ -207,6 +207,10 @@ export function validateSitesConfig(config) {
 
       assertSafePath(site.root, `${site.key}.root`);
 
+      if (site.deployRoot) {
+        assertSafePath(site.deployRoot, `${site.key}.deployRoot`);
+      }
+
       if (site.index) {
         assertNoNginxControlChars(site.index, `${site.key}.index`);
         if (site.index.includes('/')) {
@@ -221,6 +225,27 @@ export function validateSitesConfig(config) {
       });
     }
   }
+}
+
+export function findSiteOrThrow(sites, key) {
+  const site = sites.find((candidate) => candidate.key === key);
+
+  if (!site) {
+    throw new Error(`No site found with key: ${key}`);
+  }
+
+  return site;
+}
+
+export function staticDeployRootForSite(site, defaults = {}) {
+  if (site.kind !== 'static') {
+    throw new Error(`Site ${site.key} is not a static site.`);
+  }
+
+  if (site.deployRoot) return site.deployRoot;
+
+  const staticRootBase = defaults.staticRootBase || '/opt/nuc-web/sites';
+  return path.join(staticRootBase, site.key);
 }
 
 export function nginxListenToUrl(listen) {
