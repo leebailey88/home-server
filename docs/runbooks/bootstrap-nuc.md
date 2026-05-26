@@ -31,6 +31,16 @@ nuc-grizzly.grizzlybulls.com
 
 Leave `grizzlybulls.com` and `www.grizzlybulls.com` commented out until the NUC preview hostname has been stable.
 
+Keep the SSH ingress enabled unless you have another recovery path:
+
+```yaml
+cloudflared:
+  ssh:
+    enabled: true
+    hostname: ssh.grizzlybulls.com
+    service: ssh://localhost:22
+```
+
 ## 4. Create the local environment file
 
 ```bash
@@ -84,13 +94,36 @@ pnpm render:cloudflared
 cat cloudflared/generated/config.yml
 ```
 
+The generated config should include both:
+
+```text
+ssh.grizzlybulls.com       -> ssh://localhost:22
+nuc-grizzly.grizzlybulls.com -> http://127.0.0.1:80
+```
+
 If the generated config is ready for the NUC, install it with:
 
 ```bash
 sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/install-cloudflared-config.sh
 ```
 
-Or manually copy/adapt it to:
+The installer backs up the existing config, merges managed hostnames into it, preserves unrelated ingress entries, validates the merged config with `cloudflared tunnel ingress validate`, and only then restarts `cloudflared`.
+
+Backups are written to:
+
+```text
+/etc/cloudflared/backups/
+```
+
+If SSH breaks anyway, recover from local console or LAN access by restoring the latest backup:
+
+```bash
+sudo cp /etc/cloudflared/backups/config.yml.<timestamp>.bak /etc/cloudflared/config.yml
+sudo cloudflared tunnel ingress validate /etc/cloudflared/config.yml
+sudo systemctl restart cloudflared
+```
+
+Or manually copy/adapt the generated config to:
 
 ```text
 /etc/cloudflared/config.yml
