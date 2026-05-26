@@ -60,7 +60,11 @@ function assertSafeListen(value, label) {
   }
 }
 
-function assertSafeUrl(value, label, { requireLoopback = false, allowedProtocols = ['http:', 'https:'] } = {}) {
+function assertSafeUrl(
+  value,
+  label,
+  { requireLoopback = false, allowedProtocols = ['http:', 'https:'] } = {},
+) {
   assertNoNginxControlChars(value, label);
 
   let parsed;

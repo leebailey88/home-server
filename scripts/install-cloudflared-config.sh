@@ -24,7 +24,7 @@ fi
 log "Merging managed ingress with existing Cloudflare Tunnel config..."
 node scripts/merge-cloudflared-config.mjs "${CLOUDFLARED_CONFIG_FILE}" "${CLOUDFLARED_OUTPUT_FILE}" "${CLOUDFLARED_MERGED_OUTPUT_FILE}"
 
-if command -v cloudflared >/dev/null 2>&1; then
+if command -v cloudflared > /dev/null 2>&1; then
   log "Validating merged Cloudflare Tunnel config..."
   cloudflared tunnel ingress validate "${CLOUDFLARED_MERGED_OUTPUT_FILE}"
 else
@@ -43,7 +43,7 @@ fi
 
 install -m 0600 "${CLOUDFLARED_MERGED_OUTPUT_FILE}" "${CLOUDFLARED_CONFIG_FILE}"
 
-if systemctl list-unit-files cloudflared.service >/dev/null 2>&1; then
+if systemctl list-unit-files cloudflared.service > /dev/null 2>&1; then
   log "Restarting cloudflared..."
   systemctl restart cloudflared
   systemctl status cloudflared --no-pager

@@ -118,7 +118,7 @@ Backups are written to:
 If SSH breaks anyway, recover from local console or LAN access by restoring the latest backup:
 
 ```bash
-sudo cp /etc/cloudflared/backups/config.yml.<timestamp>.bak /etc/cloudflared/config.yml
+sudo cp /etc/cloudflared/backups/config.yml. /etc/cloudflared/config.yml < timestamp > .bak
 sudo cloudflared tunnel ingress validate /etc/cloudflared/config.yml
 sudo systemctl restart cloudflared
 ```

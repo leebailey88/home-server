@@ -14,7 +14,9 @@ const managedPath = process.env.CLOUDFLARED_MANAGED_CONFIG_FILE || process.argv[
 const outputPath = process.env.CLOUDFLARED_MERGED_CONFIG_FILE || process.argv[4];
 
 if (!managedPath || !outputPath) {
-  fail('Usage: node scripts/merge-cloudflared-config.mjs <existing-config|-> <managed-config> <output-config>');
+  fail(
+    'Usage: node scripts/merge-cloudflared-config.mjs <existing-config|-> <managed-config> <output-config>',
+  );
 }
 
 function readYamlIfExists(filePath) {
@@ -38,7 +40,9 @@ const managedHostnames = new Set(
 );
 
 if (!managedHostnames.has('ssh.grizzlybulls.com')) {
-  fail('Refusing to install Cloudflare Tunnel config without managed ssh.grizzlybulls.com ingress.');
+  fail(
+    'Refusing to install Cloudflare Tunnel config without managed ssh.grizzlybulls.com ingress.',
+  );
 }
 
 const existingIngress = Array.isArray(existingConfig.ingress) ? existingConfig.ingress : [];
@@ -48,7 +52,9 @@ const preservedIngress = existingIngress.filter((entry) => {
   return !managedHostnames.has(String(entry.hostname).toLowerCase());
 });
 
-const fallbackIngress = managedIngress.find((entry) => entry && entry.service && !entry.hostname) || {
+const fallbackIngress = managedIngress.find(
+  (entry) => entry && entry.service && !entry.hostname,
+) || {
   service: 'http_status:404',
 };
 
