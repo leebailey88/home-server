@@ -7,12 +7,16 @@ defaults:
   staticRootBase: '/opt/nuc-web/sites'
 
 # Optional values used by scripts/render-cloudflared-config.mjs.
-# Keep SSH and public web routing conceptually separate; SSH can continue to use
-# ssh.grizzlybulls.com through Cloudflare Access.
+# The SSH ingress is intentionally managed by this repo because remote NUC
+# access depends on it. Do not remove it unless you have another recovery path.
 cloudflared:
   tunnel: REPLACE_WITH_TUNNEL_ID
   credentialsFile: /etc/cloudflared/REPLACE_WITH_TUNNEL_ID.json
   service: http://127.0.0.1:80
+  ssh:
+    enabled: true
+    hostname: ssh.grizzlybulls.com
+    service: ssh://localhost:22
 
 sites:
   - key: grizzly-bulls
