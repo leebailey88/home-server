@@ -1,0 +1,11 @@
+[Unit]
+Description=Home Server web gateway health monitor
+Wants=network-online.target
+After=network-online.target docker.service nginx.service cloudflared.service
+
+[Service]
+Type=oneshot
+WorkingDirectory={{REPO_ROOT}}
+Environment=HOME_SERVER_ENV_FILE={{ENV_FILE}}
+Environment=HOME_SERVER_STATE_DIR={{STATE_DIR}}
+ExecStart=/usr/bin/env bash {{REPO_ROOT}}/scripts/monitor-gateway.sh
