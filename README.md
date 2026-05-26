@@ -11,7 +11,7 @@ This repo manages the shared web gateway layer for a home-hosted NUC that runs m
 - Keep app containers bound to `127.0.0.1` only.
 - Make site routing declarative through `config/sites.yaml`.
 - Generate Nginx and Cloudflare Tunnel config from the same site registry.
-- Provide lightweight health checks and repeatable bootstrap scripts.
+- Provide lightweight health checks, systemd monitoring, and repeatable bootstrap scripts.
 - Avoid interfering with the existing `money-bot` Docker instances and IB Gateway containers.
 
 ## Target architecture
@@ -47,11 +47,16 @@ scripts/
   render-nginx-config.mjs        Generates Nginx config from sites.yaml
   render-cloudflared-config.mjs  Generates Cloudflare Tunnel config from sites.yaml
   install-nginx-config.sh        Installs rendered config and reloads Nginx
+  install-cloudflared-config.sh  Installs rendered tunnel config and restarts cloudflared
   check-health.sh                Checks Nginx, cloudflared, upstreams, and host routes
+  monitor-gateway.sh             Stateful monitor wrapper with optional Discord alerts
+  install-monitor-service.sh     Installs the systemd monitor service/timer
   lib/                           Shared shell and Node helpers
+systemd/                         systemd service/timer templates
 docs/
   architecture.md                System design notes
   runbooks/bootstrap-nuc.md      First-host setup steps
+  runbooks/monitoring.md         Gateway monitor operations
 ```
 
 ## Quick start
@@ -94,6 +99,14 @@ On the NUC, once this repo is cloned:
 sudo bash scripts/bootstrap-nuc.sh
 sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/install-nginx-config.sh
 sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/check-health.sh
+```
+
+To install the optional repeating gateway monitor:
+
+```bash
+cp .env.example .env
+nano .env
+sudo HOME_SERVER_ENV_FILE="$(pwd)/.env" bash scripts/install-monitor-service.sh
 ```
 
 ## Initial production convention
