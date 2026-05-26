@@ -23,3 +23,16 @@ require_root() {
 repo_root() {
   git rev-parse --show-toplevel 2> /dev/null || pwd
 }
+
+load_env_file() {
+  local env_file="$1"
+
+  if [[ ! -f "${env_file}" ]]; then
+    return 0
+  fi
+
+  set -a
+  # shellcheck disable=SC1090
+  source "${env_file}"
+  set +a
+}
