@@ -23,39 +23,80 @@ cp config/sites.example.yaml config/sites.yaml
 nano config/sites.yaml
 ```
 
-Start with only the preview Grizzly Bulls hostname enabled.
+Start with only the preview Grizzly Bulls hostname enabled:
 
-## 4. Bootstrap the host
+```text
+nuc-grizzly.grizzlybulls.com
+```
+
+Leave `grizzlybulls.com` and `www.grizzlybulls.com` commented out until the NUC preview hostname has been stable.
+
+## 4. Validate and render config locally
+
+```bash
+pnpm validate:sites
+pnpm render:nginx
+pnpm render:cloudflared
+```
+
+The generated files are ignored by git:
+
+```text
+nginx/generated/*.conf
+cloudflared/generated/config.yml
+```
+
+## 5. Bootstrap the host
 
 ```bash
 sudo bash scripts/bootstrap-nuc.sh
 ```
 
-## 5. Install Nginx config
+## 6. Install Nginx config
 
 ```bash
 sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/install-nginx-config.sh
 ```
 
-## 6. Configure Cloudflare Tunnel
+This renders the config, installs the generated server blocks into `/etc/nginx/sites-available/home-server`, writes the aggregate enabled config to `/etc/nginx/sites-enabled/home-server.conf`, runs `nginx -t`, and reloads Nginx.
 
-Use `config/cloudflared.example.yml` as the model for `/etc/cloudflared/config.yml`.
+## 7. Configure Cloudflare Tunnel
 
-Then reload cloudflared:
+Use the generated tunnel config as a starting point:
+
+```bash
+pnpm render:cloudflared
+cat cloudflared/generated/config.yml
+```
+
+Then copy/adapt it to:
+
+```text
+/etc/cloudflared/config.yml
+```
+
+Reload cloudflared:
 
 ```bash
 sudo systemctl restart cloudflared
 sudo systemctl status cloudflared --no-pager
 ```
 
-## 7. Validate
+## 8. Validate the local gateway
 
 ```bash
 sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/check-health.sh
 curl -fsS -H 'Host: nuc-grizzly.grizzlybulls.com' http://127.0.0.1/
 ```
 
-## 8. Deploy Grizzly Bulls separately
+The health check validates:
+
+- Nginx config syntax
+- `cloudflared.service` status, if installed
+- each enabled site's `healthUrl`, if configured
+- each enabled site's local Nginx route using its first hostname as the `Host` header
+
+## 9. Deploy Grizzly Bulls separately
 
 From the `grizzly-bulls` repo on WSL:
 

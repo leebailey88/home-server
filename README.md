@@ -2,7 +2,7 @@
 
 Infrastructure tooling for the Grizzly Bulls home-server NUC.
 
-This repo is intended to manage the shared web gateway layer for a home-hosted NUC that runs multiple mostly-static sites and app containers behind Cloudflare Tunnel.
+This repo manages the shared web gateway layer for a home-hosted NUC that runs multiple mostly-static sites and app containers behind Cloudflare Tunnel.
 
 ## Goals
 
@@ -10,6 +10,7 @@ This repo is intended to manage the shared web gateway layer for a home-hosted N
 - Route multiple hostnames through one local Nginx reverse proxy.
 - Keep app containers bound to `127.0.0.1` only.
 - Make site routing declarative through `config/sites.yaml`.
+- Generate Nginx and Cloudflare Tunnel config from the same site registry.
 - Provide lightweight health checks and repeatable bootstrap scripts.
 - Avoid interfering with the existing `money-bot` Docker instances and IB Gateway containers.
 
@@ -34,19 +35,23 @@ localhost-bound apps and static roots
 
 ```text
 config/
-  sites.example.yaml          Example declarative site registry
-  cloudflared.example.yml     Example Cloudflare Tunnel ingress config
+  sites.example.yaml             Example declarative site registry
+  cloudflared.example.yml        Handwritten Cloudflare Tunnel example
+cloudflared/generated/           Generated tunnel config, ignored by git
 nginx/
-  templates/                  Nginx server block templates
+  templates/                     Nginx server block templates
+  generated/                     Generated Nginx config, ignored by git
 scripts/
-  bootstrap-nuc.sh            Installs base host packages for the web gateway
-  render-nginx-config.mjs     Generates Nginx config from sites.yaml
-  install-nginx-config.sh     Installs rendered config and reloads Nginx
-  check-health.sh             Checks Nginx, cloudflared, and configured upstreams
-  lib/common.sh               Shared shell helpers
+  bootstrap-nuc.sh               Installs base host packages for the web gateway
+  validate-sites-config.mjs      Validates config/sites.yaml or the example fallback
+  render-nginx-config.mjs        Generates Nginx config from sites.yaml
+  render-cloudflared-config.mjs  Generates Cloudflare Tunnel config from sites.yaml
+  install-nginx-config.sh        Installs rendered config and reloads Nginx
+  check-health.sh                Checks Nginx, cloudflared, upstreams, and host routes
+  lib/                           Shared shell and Node helpers
 docs/
-  architecture.md             System design notes
-  runbooks/bootstrap-nuc.md   First-host setup steps
+  architecture.md                System design notes
+  runbooks/bootstrap-nuc.md      First-host setup steps
 ```
 
 ## Quick start
@@ -64,10 +69,17 @@ Create your real site registry from the example:
 cp config/sites.example.yaml config/sites.yaml
 ```
 
-Render Nginx config locally for inspection:
+Validate the site registry:
+
+```bash
+pnpm validate:sites
+```
+
+Render Nginx and Cloudflare Tunnel config locally for inspection:
 
 ```bash
 pnpm render:nginx
+pnpm render:cloudflared
 ```
 
 Validate formatting and scripts:
@@ -80,8 +92,8 @@ On the NUC, once this repo is cloned:
 
 ```bash
 sudo bash scripts/bootstrap-nuc.sh
-sudo bash scripts/install-nginx-config.sh
-sudo bash scripts/check-health.sh
+sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/install-nginx-config.sh
+sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/check-health.sh
 ```
 
 ## Initial production convention
