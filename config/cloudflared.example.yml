@@ -1,13 +1,17 @@
 # Example only. The real tunnel credentials/config usually live under:
 # /etc/cloudflared/config.yml
 #
-# Keep SSH and web routing conceptually separate. SSH may use ssh.grizzlybulls.com
-# through Cloudflare Access. Web hostnames should point to local Nginx.
+# IMPORTANT: SSH access to the NUC depends on ssh.grizzlybulls.com.
+# Keep that ingress before web hostnames so remote SSH survives cloudflared restarts.
+# scripts/install-cloudflared-config.sh now merges managed hostnames into the
+# existing config instead of replacing unrelated ingress entries wholesale.
 
 tunnel: REPLACE_WITH_TUNNEL_ID
 credentials-file: /etc/cloudflared/REPLACE_WITH_TUNNEL_ID.json
 
 ingress:
+  - hostname: ssh.grizzlybulls.com
+    service: ssh://localhost:22
   - hostname: nuc-grizzly.grizzlybulls.com
     service: http://127.0.0.1:80
   # Add only after intentional cutover:

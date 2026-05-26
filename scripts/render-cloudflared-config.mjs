@@ -17,19 +17,35 @@ const credentialsFile =
   cloudflared.credentialsFile ||
   `/etc/cloudflared/${tunnel}.json`;
 const service = cloudflared.service || 'http://127.0.0.1:80';
+const ssh = cloudflared.ssh || {};
+const sshEnabled = ssh.enabled !== false;
+const sshHostname = process.env.CLOUDFLARED_SSH_HOSTNAME || ssh.hostname || 'ssh.grizzlybulls.com';
+const sshService = process.env.CLOUDFLARED_SSH_SERVICE || ssh.service || 'ssh://localhost:22';
 
-const hostnames = enabledSites
+const webHostnames = enabledSites
   .filter((site) => site.publishViaTunnel !== false)
   .flatMap((site) => site.hostnames);
+
+const managedIngress = [
+  ...(sshEnabled
+    ? [
+        {
+          hostname: sshHostname,
+          service: sshService,
+        },
+      ]
+    : []),
+  ...webHostnames.map((hostname) => ({
+    hostname,
+    service,
+  })),
+];
 
 const doc = {
   tunnel,
   'credentials-file': credentialsFile,
   ingress: [
-    ...hostnames.map((hostname) => ({
-      hostname,
-      service,
-    })),
+    ...managedIngress,
     {
       service: 'http_status:404',
     },
@@ -40,5 +56,5 @@ fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 fs.writeFileSync(outputPath, YAML.stringify(doc, { lineWidth: 0 }));
 
 console.log(
-  `Rendered Cloudflare Tunnel config for ${hostnames.length} hostname(s) from ${selectedConfigPath} into ${outputPath}`,
+  `Rendered Cloudflare Tunnel config for ${managedIngress.length} managed hostname(s) from ${selectedConfigPath} into ${outputPath}`,
 );
