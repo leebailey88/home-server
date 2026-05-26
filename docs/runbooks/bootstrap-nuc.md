@@ -31,7 +31,22 @@ nuc-grizzly.grizzlybulls.com
 
 Leave `grizzlybulls.com` and `www.grizzlybulls.com` commented out until the NUC preview hostname has been stable.
 
-## 4. Validate and render config locally
+## 4. Create the local environment file
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+At minimum, make sure `HOME_SERVER_CONFIG` points at the real NUC checkout path:
+
+```bash
+HOME_SERVER_CONFIG=/home/lee/projects/home-server/config/sites.yaml
+```
+
+Add Discord monitor webhooks later if desired.
+
+## 5. Validate and render config locally
 
 ```bash
 pnpm validate:sites
@@ -46,13 +61,13 @@ nginx/generated/*.conf
 cloudflared/generated/config.yml
 ```
 
-## 5. Bootstrap the host
+## 6. Bootstrap the host
 
 ```bash
 sudo bash scripts/bootstrap-nuc.sh
 ```
 
-## 6. Install Nginx config
+## 7. Install Nginx config
 
 ```bash
 sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/install-nginx-config.sh
@@ -60,7 +75,7 @@ sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/install-nginx-co
 
 This renders the config, installs the generated server blocks into `/etc/nginx/sites-available/home-server`, writes the aggregate enabled config to `/etc/nginx/sites-enabled/home-server.conf`, runs `nginx -t`, and reloads Nginx.
 
-## 7. Configure Cloudflare Tunnel
+## 8. Configure Cloudflare Tunnel
 
 Use the generated tunnel config as a starting point:
 
@@ -69,20 +84,26 @@ pnpm render:cloudflared
 cat cloudflared/generated/config.yml
 ```
 
-Then copy/adapt it to:
+If the generated config is ready for the NUC, install it with:
+
+```bash
+sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/install-cloudflared-config.sh
+```
+
+Or manually copy/adapt it to:
 
 ```text
 /etc/cloudflared/config.yml
 ```
 
-Reload cloudflared:
+Reload cloudflared manually if you do not use the installer:
 
 ```bash
 sudo systemctl restart cloudflared
 sudo systemctl status cloudflared --no-pager
 ```
 
-## 8. Validate the local gateway
+## 9. Validate the local gateway
 
 ```bash
 sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/check-health.sh
@@ -96,7 +117,22 @@ The health check validates:
 - each enabled site's `healthUrl`, if configured
 - each enabled site's local Nginx route using its first hostname as the `Host` header
 
-## 9. Deploy Grizzly Bulls separately
+## 10. Install optional repeating monitoring
+
+```bash
+sudo HOME_SERVER_ENV_FILE="$(pwd)/.env" bash scripts/install-monitor-service.sh
+```
+
+Inspect it with:
+
+```bash
+sudo systemctl status home-server-gateway-monitor.timer --no-pager
+sudo journalctl -u home-server-gateway-monitor.service -o cat -n 100
+```
+
+See `docs/runbooks/monitoring.md` for alert behavior and operations.
+
+## 11. Deploy Grizzly Bulls separately
 
 From the `grizzly-bulls` repo on WSL:
 
