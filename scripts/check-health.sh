@@ -6,9 +6,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 
 log "Checking nginx config..."
-nginx -t >/dev/null
+nginx -t > /dev/null
 
-if systemctl list-unit-files cloudflared.service >/dev/null 2>&1; then
+if systemctl list-unit-files cloudflared.service > /dev/null 2>&1; then
   log "Checking cloudflared service..."
   systemctl is-active --quiet cloudflared || fail "cloudflared service is not active"
 else

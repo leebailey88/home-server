@@ -35,7 +35,11 @@ function assertSafeHostname(hostname, label) {
     throw new Error(`${label} must be a hostname only, not a URL or host:port value.`);
   }
 
-  if (!/^(\*\.)?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(hostname)) {
+  if (
+    !/^(\*\.)?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(
+      hostname,
+    )
+  ) {
     throw new Error(`${label} is not a valid DNS hostname: ${hostname}`);
   }
 }
@@ -109,7 +113,9 @@ export function loadSitesConfig(options = {}) {
     defaults: config.defaults || {},
     cloudflared: config.cloudflared || {},
     sites: Array.isArray(config.sites) ? config.sites : [],
-    enabledSites: Array.isArray(config.sites) ? config.sites.filter((site) => site.enabled !== false) : [],
+    enabledSites: Array.isArray(config.sites)
+      ? config.sites.filter((site) => site.enabled !== false)
+      : [],
   };
 }
 
@@ -218,6 +224,8 @@ export function validateSitesConfig(config) {
 }
 
 export function nginxListenToUrl(listen) {
-  const normalized = listen.startsWith('localhost:') ? listen.replace('localhost:', '127.0.0.1:') : listen;
+  const normalized = listen.startsWith('localhost:')
+    ? listen.replace('localhost:', '127.0.0.1:')
+    : listen;
   return `http://${normalized}`;
 }

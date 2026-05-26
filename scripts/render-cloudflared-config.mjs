@@ -7,7 +7,8 @@ import { loadSitesConfig } from './lib/sites-config.mjs';
 
 const repoRoot = process.cwd();
 const outputPath =
-  process.env.CLOUDFLARED_OUTPUT_FILE || path.join(repoRoot, 'cloudflared', 'generated', 'config.yml');
+  process.env.CLOUDFLARED_OUTPUT_FILE ||
+  path.join(repoRoot, 'cloudflared', 'generated', 'config.yml');
 
 const { cloudflared, enabledSites, selectedConfigPath } = loadSitesConfig({ repoRoot });
 const tunnel = process.env.CLOUDFLARED_TUNNEL_ID || cloudflared.tunnel || 'REPLACE_WITH_TUNNEL_ID';
