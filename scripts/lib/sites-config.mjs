@@ -60,7 +60,7 @@ function assertSafeListen(value, label) {
   }
 }
 
-function assertSafeUrl(value, label, { requireLoopback = false } = {}) {
+function assertSafeUrl(value, label, { requireLoopback = false, allowedProtocols = ['http:', 'https:'] } = {}) {
   assertNoNginxControlChars(value, label);
 
   let parsed;
@@ -70,8 +70,8 @@ function assertSafeUrl(value, label, { requireLoopback = false } = {}) {
     throw new Error(`${label} must be a valid URL. Received: ${value}`);
   }
 
-  if (!['http:', 'https:'].includes(parsed.protocol)) {
-    throw new Error(`${label} must use http:// or https://. Received: ${value}`);
+  if (!allowedProtocols.includes(parsed.protocol)) {
+    throw new Error(`${label} must use one of ${allowedProtocols.join(', ')}. Received: ${value}`);
   }
 
   if (requireLoopback && !DEFAULT_LOOPBACK_HOSTS.has(parsed.hostname)) {
@@ -146,6 +146,16 @@ export function validateSitesConfig(config) {
 
   if (cloudflared.credentialsFile) {
     assertSafePath(cloudflared.credentialsFile, 'cloudflared.credentialsFile');
+  }
+
+  if (cloudflared.ssh?.enabled !== false) {
+    const sshHostname = cloudflared.ssh?.hostname || 'ssh.grizzlybulls.com';
+    const sshService = cloudflared.ssh?.service || 'ssh://localhost:22';
+    assertSafeHostname(sshHostname, 'cloudflared.ssh.hostname');
+    assertSafeUrl(sshService, 'cloudflared.ssh.service', {
+      requireLoopback: true,
+      allowedProtocols: ['ssh:'],
+    });
   }
 
   const enabledKeys = new Set();
