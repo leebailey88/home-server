@@ -14,7 +14,12 @@ const service = process.env.ALERT_SERVICE || 'home-server';
 const hostname = process.env.ALERT_HOSTNAME || '';
 
 const emoji = status === 'ok' ? '✅' : severity === 'critical' ? '🚨' : '⚠️';
-const content = [`${emoji} **${title}**`, `Status: ${status}`, `Severity: ${severity}`, `Service: ${service}`];
+const content = [
+  `${emoji} **${title}**`,
+  `Status: ${status}`,
+  `Severity: ${severity}`,
+  `Service: ${service}`,
+];
 
 if (hostname) content.push(`Host: ${hostname}`);
 if (details) content.push('', details.slice(0, 1800));

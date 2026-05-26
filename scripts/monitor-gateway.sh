@@ -9,7 +9,7 @@ source "${SCRIPT_DIR}/lib/common.sh"
 ENV_FILE="${HOME_SERVER_ENV_FILE:-${REPO_ROOT}/.env}"
 STATE_DIR="${HOME_SERVER_STATE_DIR:-/var/lib/home-server}"
 STATE_FILE="${STATE_DIR}/gateway-monitor.state"
-HOSTNAME_VALUE="$(hostname -f 2>/dev/null || hostname)"
+HOSTNAME_VALUE="$(hostname -f 2> /dev/null || hostname)"
 
 load_env_file "${ENV_FILE}"
 
@@ -26,7 +26,7 @@ check_status=$?
 set -e
 
 if [[ ${check_status} -eq 0 ]]; then
-  printf 'ok' >"${STATE_FILE}"
+  printf 'ok' > "${STATE_FILE}"
   printf '%s\n' "${check_output}"
 
   if [[ "${previous_status}" == "firing" && -n "${DISCORD_MONITOR_WARNING_WEBHOOK_URL:-}" ]]; then
@@ -43,7 +43,7 @@ if [[ ${check_status} -eq 0 ]]; then
   exit 0
 fi
 
-printf 'firing' >"${STATE_FILE}"
+printf 'firing' > "${STATE_FILE}"
 printf '%s\n' "${check_output}" >&2
 
 if [[ "${previous_status}" != "firing" && -n "${DISCORD_MONITOR_CRITICAL_WEBHOOK_URL:-${DISCORD_MONITOR_WARNING_WEBHOOK_URL:-}}" ]]; then

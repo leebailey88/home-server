@@ -23,7 +23,7 @@ log "Installing Cloudflare Tunnel config to ${CLOUDFLARED_CONFIG_FILE}..."
 install -d -m 0755 "$(dirname "${CLOUDFLARED_CONFIG_FILE}")"
 install -m 0600 "${CLOUDFLARED_OUTPUT_FILE}" "${CLOUDFLARED_CONFIG_FILE}"
 
-if systemctl list-unit-files cloudflared.service >/dev/null 2>&1; then
+if systemctl list-unit-files cloudflared.service > /dev/null 2>&1; then
   log "Restarting cloudflared..."
   systemctl restart cloudflared
   systemctl status cloudflared --no-pager

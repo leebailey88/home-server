@@ -26,7 +26,7 @@ render_template() {
     -e "s#{{STATE_DIR}}#${STATE_DIR}#g" \
     -e "s#{{ON_BOOT_SEC}}#${ON_BOOT_SEC}#g" \
     -e "s#{{ON_UNIT_ACTIVE_SEC}}#${ON_UNIT_ACTIVE_SEC}#g" \
-    "${template_file}" >"${output_file}"
+    "${template_file}" > "${output_file}"
 }
 
 log "Installing gateway monitor systemd units..."

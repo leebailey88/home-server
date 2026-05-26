@@ -21,7 +21,7 @@ require_root() {
 }
 
 repo_root() {
-  git rev-parse --show-toplevel 2>/dev/null || pwd
+  git rev-parse --show-toplevel 2> /dev/null || pwd
 }
 
 load_env_file() {
