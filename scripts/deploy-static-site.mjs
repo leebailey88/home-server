@@ -67,7 +67,10 @@ if (!fs.existsSync(path.join(sourceDir, indexFile))) {
 const deployRoot = staticDeployRootForSite(site, defaults);
 const releasesDir = path.join(deployRoot, 'releases');
 const currentLink = path.join(deployRoot, 'current');
-const timestamp = new Date().toISOString().replaceAll(/[-:.TZ]/g, '').slice(0, 14);
+const timestamp = new Date()
+  .toISOString()
+  .replaceAll(/[-:.TZ]/g, '')
+  .slice(0, 14);
 const releaseName = `${timestamp}-${process.env.USER || 'deploy'}`;
 const releaseDir = path.join(releasesDir, releaseName);
 
@@ -83,7 +86,10 @@ const metadata = {
   sourceDir,
   hostnames: site.hostnames,
 };
-fs.writeFileSync(path.join(releaseDir, '.home-server-release.json'), `${JSON.stringify(metadata, null, 2)}\n`);
+fs.writeFileSync(
+  path.join(releaseDir, '.home-server-release.json'),
+  `${JSON.stringify(metadata, null, 2)}\n`,
+);
 
 const tmpLink = path.join(deployRoot, '.current.tmp');
 fs.rmSync(tmpLink, { force: true });
