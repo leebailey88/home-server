@@ -1,6 +1,6 @@
 #!/usr/bin/env node
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import path from 'node:path';
 import process from 'node:process';
 import { loadSitesConfig } from './lib/sites-config.mjs';
 
@@ -82,23 +82,13 @@ function checkCronDaemon() {
   const candidates = ['cron.service', 'crond.service'];
 
   for (const unit of candidates) {
-    try {
-      const result = process.binding('spawn_sync').spawn({
-        file: '/usr/bin/systemctl',
-        args: ['systemctl', 'is-active', '--quiet', unit],
-        stdio: [
-          { type: 'ignore' },
-          { type: 'pipe' },
-          { type: 'pipe' },
-        ],
-      });
+    const result = spawnSync('systemctl', ['is-active', '--quiet', unit], {
+      stdio: 'ignore',
+    });
 
-      if (result.status === 0) {
-        ok('cron daemon', `${unit} is active`);
-        return;
-      }
-    } catch {
-      // Try the next option / fallback below.
+    if (result.status === 0) {
+      ok('cron daemon', `${unit} is active`);
+      return;
     }
   }
 
@@ -128,20 +118,26 @@ function checkJob(job) {
 
   const ageMinutes = ageMinutesForMtime(logPath);
   if (Number.isFinite(maxAgeMinutes) && maxAgeMinutes > 0 && ageMinutes > maxAgeMinutes) {
-    fail(label, `${logPath} has not been updated for ${ageMinutes} minute(s); maxAgeMinutes=${maxAgeMinutes}`);
+    fail(
+      label,
+      `${logPath} has not been updated for ${ageMinutes} minute(s); maxAgeMinutes=${maxAgeMinutes}`,
+    );
   } else {
     ok(label, `${logPath} updated ${ageMinutes} minute(s) ago`);
   }
 
   const tail = readTail(logPath, job.logTailBytes ?? logTailBytes);
-  const errorPatterns = job.errorPatterns === false ? [] : regexesFor(job.errorPatterns || defaultErrorPatterns);
+  const errorPatterns =
+    job.errorPatterns === false ? [] : regexesFor(job.errorPatterns || defaultErrorPatterns);
   const ignorePatterns = regexesFor(job.ignorePatterns || []);
   const relevantLines = tail
     .split(/\r?\n/)
     .filter(Boolean)
     .filter((line) => !ignorePatterns.some((pattern) => pattern.test(line)));
 
-  const matchingLine = relevantLines.find((line) => errorPatterns.some((pattern) => pattern.test(line)));
+  const matchingLine = relevantLines.find((line) =>
+    errorPatterns.some((pattern) => pattern.test(line)),
+  );
   if (matchingLine) {
     fail(label, `recent log output matched an error pattern: ${matchingLine.slice(0, 500)}`);
   }
