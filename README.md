@@ -11,7 +11,7 @@ This repo manages the shared web gateway layer for a home-hosted NUC that runs m
 - Keep app containers bound to `127.0.0.1` only.
 - Make site routing declarative through `config/sites.yaml`.
 - Generate Nginx and Cloudflare Tunnel config from the same site registry.
-- Provide lightweight health checks, systemd monitoring, and repeatable bootstrap scripts.
+- Provide lightweight health checks, public route checks, systemd monitoring, Discord alerting, and repeatable bootstrap scripts.
 - Support atomic static-site deploys with simple release listing and rollback.
 - Avoid interfering with the existing `money-bot` Docker instances and IB Gateway containers.
 
@@ -121,6 +121,8 @@ cp .env.example .env
 nano .env
 sudo HOME_SERVER_ENV_FILE="$(pwd)/.env" bash scripts/install-monitor-service.sh
 ```
+
+`config/sites.yaml` supports deeper monitor assertions such as `expectedStatus`, `expectedBodyContains`, `healthBodyContains`, and `publicHealthChecks`. See `docs/runbooks/monitoring.md` for the Grizzly Bulls setup and cutover checklist.
 
 ## Initial production convention
 

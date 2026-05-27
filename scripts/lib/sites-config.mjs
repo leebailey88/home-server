@@ -86,6 +86,65 @@ function assertSafeUrl(
   }
 }
 
+function assertExpectedStatuses(value, label) {
+  if (value === undefined) return;
+  const values = Array.isArray(value) ? value : [value];
+
+  if (values.length === 0) {
+    throw new Error(`${label} must not be empty.`);
+  }
+
+  for (const status of values) {
+    if (!Number.isInteger(Number(status)) || Number(status) < 100 || Number(status) > 599) {
+      throw new Error(`${label} must contain valid HTTP status codes. Received: ${status}`);
+    }
+  }
+}
+
+function assertExpectedBodyContains(value, label) {
+  if (value === undefined) return;
+  const values = Array.isArray(value) ? value : [value];
+
+  if (values.length === 0) {
+    throw new Error(`${label} must not be empty.`);
+  }
+
+  for (const expectedText of values) {
+    assertNoNginxControlChars(String(expectedText), label);
+  }
+}
+
+function assertPublicHealthChecks(value, label) {
+  if (value === undefined) return;
+
+  if (!Array.isArray(value)) {
+    throw new Error(`${label} must be an array of URLs or health check objects.`);
+  }
+
+  for (const [index, check] of value.entries()) {
+    const checkLabel = `${label}[${index}]`;
+
+    if (typeof check === 'string') {
+      assertSafeUrl(check, checkLabel, { requireLoopback: false });
+      continue;
+    }
+
+    if (!check || typeof check !== 'object') {
+      throw new Error(`${checkLabel} must be a URL string or object.`);
+    }
+
+    assertSafeUrl(check.url, `${checkLabel}.url`, { requireLoopback: false });
+    assertExpectedStatuses(
+      check.expectedStatus ?? check.expectedStatuses,
+      `${checkLabel}.expectedStatus`,
+    );
+    assertExpectedBodyContains(
+      check.expectedBodyContains ?? check.expectedBodyIncludes,
+      `${checkLabel}.expectedBodyContains`,
+    );
+  }
+}
+
 export function resolveConfigPath({
   repoRoot = process.cwd(),
   configPath = process.env.HOME_SERVER_CONFIG,
@@ -238,6 +297,17 @@ export function validateSitesConfig(config) {
         requireLoopback: site.allowNonLoopbackUpstreams !== true,
       });
     }
+
+    assertExpectedStatuses(
+      site.expectedStatus ?? site.expectedStatuses,
+      `${site.key}.expectedStatus`,
+    );
+    assertExpectedBodyContains(site.expectedBodyContains, `${site.key}.expectedBodyContains`);
+    assertExpectedBodyContains(site.healthBodyContains, `${site.key}.healthBodyContains`);
+    assertPublicHealthChecks(
+      site.publicHealthChecks ?? site.publicUrls,
+      `${site.key}.publicHealthChecks`,
+    );
   }
 }
 
