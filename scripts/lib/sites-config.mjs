@@ -237,6 +237,16 @@ export function loadSitesConfig(options = {}) {
   };
 }
 
+export function nginxListenToUrl(listen) {
+  const normalizedListen = listen || '127.0.0.1:80';
+  const host = normalizedListen.startsWith('[')
+    ? normalizedListen.slice(0, normalizedListen.lastIndexOf(':'))
+    : normalizedListen.split(':').slice(0, -1).join(':');
+  const port = normalizedListen.split(':').at(-1);
+
+  return `http://${host}:${port}`;
+}
+
 export function validateSitesConfig(config) {
   const defaults = config.defaults || {};
   const cloudflared = config.cloudflared || {};
