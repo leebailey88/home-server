@@ -134,7 +134,10 @@ function assertPublicHealthChecks(value, label) {
     }
 
     assertSafeUrl(check.url, `${checkLabel}.url`, { requireLoopback: false });
-    assertExpectedStatuses(check.expectedStatus ?? check.expectedStatuses, `${checkLabel}.expectedStatus`);
+    assertExpectedStatuses(
+      check.expectedStatus ?? check.expectedStatuses,
+      `${checkLabel}.expectedStatus`,
+    );
     assertExpectedBodyContains(
       check.expectedBodyContains ?? check.expectedBodyIncludes,
       `${checkLabel}.expectedBodyContains`,
@@ -295,10 +298,16 @@ export function validateSitesConfig(config) {
       });
     }
 
-    assertExpectedStatuses(site.expectedStatus ?? site.expectedStatuses, `${site.key}.expectedStatus`);
+    assertExpectedStatuses(
+      site.expectedStatus ?? site.expectedStatuses,
+      `${site.key}.expectedStatus`,
+    );
     assertExpectedBodyContains(site.expectedBodyContains, `${site.key}.expectedBodyContains`);
     assertExpectedBodyContains(site.healthBodyContains, `${site.key}.healthBodyContains`);
-    assertPublicHealthChecks(site.publicHealthChecks ?? site.publicUrls, `${site.key}.publicHealthChecks`);
+    assertPublicHealthChecks(
+      site.publicHealthChecks ?? site.publicUrls,
+      `${site.key}.publicHealthChecks`,
+    );
   }
 }
 

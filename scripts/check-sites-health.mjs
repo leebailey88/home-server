@@ -37,16 +37,15 @@ async function checkUrl(label, rawCheck, init = {}) {
       signal: AbortSignal.timeout(timeoutMs),
     });
 
-    const statusOk = expectedStatuses.length > 0
-      ? expectedStatuses.includes(response.status)
-      : response.ok;
+    const statusOk =
+      expectedStatuses.length > 0 ? expectedStatuses.includes(response.status) : response.ok;
 
     if (!statusOk) {
       failures += 1;
-      const expected = expectedStatuses.length > 0
-        ? expectedStatuses.join(', ')
-        : 'any 2xx status';
-      console.error(`[FAIL] ${label}: ${check.url} returned ${response.status}; expected ${expected}`);
+      const expected = expectedStatuses.length > 0 ? expectedStatuses.join(', ') : 'any 2xx status';
+      console.error(
+        `[FAIL] ${label}: ${check.url} returned ${response.status}; expected ${expected}`,
+      );
       return;
     }
 
@@ -72,10 +71,12 @@ async function checkUrl(label, rawCheck, init = {}) {
 
 function publicHealthChecksForSite(site) {
   const publicChecks = site.publicHealthChecks ?? site.publicUrls ?? [];
-  return publicChecks.map((check) => normalizeCheck(check, {
-    expectedStatus: site.expectedStatus,
-    expectedBodyContains: site.expectedBodyContains,
-  }));
+  return publicChecks.map((check) =>
+    normalizeCheck(check, {
+      expectedStatus: site.expectedStatus,
+      expectedBodyContains: site.expectedBodyContains,
+    }),
+  );
 }
 
 console.log(`Checking ${enabledSites.length} enabled site(s) from ${selectedConfigPath}`);
@@ -98,19 +99,25 @@ for (const site of enabledSites) {
   const nginxUrl = nginxListenToUrl(listen);
   const firstHostname = site.hostnames[0];
 
-  await checkUrl(`${site.key} local nginx route`, {
-    ...siteExpectations,
-    url: nginxUrl,
-  }, {
-    headers: {
-      Host: firstHostname,
+  await checkUrl(
+    `${site.key} local nginx route`,
+    {
+      ...siteExpectations,
+      url: nginxUrl,
     },
-  });
+    {
+      headers: {
+        Host: firstHostname,
+      },
+    },
+  );
 
   const publicChecks = publicHealthChecksForSite(site);
   if (publicChecks.length > 0) {
     if (skipPublicChecks) {
-      console.log(`[SKIP] ${site.key} public health checks disabled by HOME_SERVER_SKIP_PUBLIC_HEALTH_CHECKS=true`);
+      console.log(
+        `[SKIP] ${site.key} public health checks disabled by HOME_SERVER_SKIP_PUBLIC_HEALTH_CHECKS=true`,
+      );
     } else {
       for (const [index, check] of publicChecks.entries()) {
         await checkUrl(`${site.key} public route ${index + 1}`, check);
