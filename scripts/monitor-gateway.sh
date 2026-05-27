@@ -25,12 +25,15 @@ check_output="$(HOME_SERVER_CONFIG="${HOME_SERVER_CONFIG:-${REPO_ROOT}/config/si
 check_status=$?
 set -e
 
+failure_webhook_url="${DISCORD_MONITOR_CRITICAL_WEBHOOK_URL:-${DISCORD_MONITOR_WARNING_WEBHOOK_URL:-}}"
+recovery_webhook_url="${DISCORD_MONITOR_RECOVERY_WEBHOOK_URL:-${failure_webhook_url}}"
+
 if [[ ${check_status} -eq 0 ]]; then
   printf 'ok' > "${STATE_FILE}"
   printf '%s\n' "${check_output}"
 
-  if [[ "${previous_status}" == "firing" && -n "${DISCORD_MONITOR_WARNING_WEBHOOK_URL:-}" ]]; then
-    DISCORD_WEBHOOK_URL="${DISCORD_MONITOR_WARNING_WEBHOOK_URL}" \
+  if [[ "${previous_status}" == "firing" && -n "${recovery_webhook_url:-}" ]]; then
+    DISCORD_WEBHOOK_URL="${recovery_webhook_url}" \
       ALERT_STATUS="ok" \
       ALERT_SEVERITY="warning" \
       ALERT_SERVICE="home-server-gateway" \
@@ -46,9 +49,8 @@ fi
 printf 'firing' > "${STATE_FILE}"
 printf '%s\n' "${check_output}" >&2
 
-if [[ "${previous_status}" != "firing" && -n "${DISCORD_MONITOR_CRITICAL_WEBHOOK_URL:-${DISCORD_MONITOR_WARNING_WEBHOOK_URL:-}}" ]]; then
-  webhook_url="${DISCORD_MONITOR_CRITICAL_WEBHOOK_URL:-${DISCORD_MONITOR_WARNING_WEBHOOK_URL}}"
-  DISCORD_WEBHOOK_URL="${webhook_url}" \
+if [[ "${previous_status}" != "firing" && -n "${failure_webhook_url:-}" ]]; then
+  DISCORD_WEBHOOK_URL="${failure_webhook_url}" \
     ALERT_STATUS="firing" \
     ALERT_SEVERITY="critical" \
     ALERT_SERVICE="home-server-gateway" \
