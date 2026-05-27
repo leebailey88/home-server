@@ -6,6 +6,17 @@ defaults:
   accessLogDir: '/var/log/nginx'
   staticRootBase: '/opt/nuc-web/sites'
 
+# Host-level cron jobs that are not owned by a specific site can be monitored here.
+# Cron logs are checked for freshness plus common error patterns such as ERROR,
+# Failed, Exception, and Traceback.
+cronJobs:
+  - key: host-backup-example
+    enabled: false
+    logPath: /var/log/home-server-backup.log
+    maxAgeMinutes: 1500
+    successPatterns:
+      - Backup completed
+
 # Optional values used by scripts/render-cloudflared-config.mjs.
 # The SSH ingress is intentionally managed by this repo because remote NUC
 # access depends on it. Do not remove it unless you have another recovery path.
@@ -45,6 +56,13 @@ sites:
       # - url: https://www.grizzlybulls.com/
       #   expectedStatus: 200
       #   expectedBodyContains: Grizzly Bulls
+    cronJobs:
+      - key: grizzly-bulls-example
+        enabled: false
+        logPath: /var/log/grizzly-bulls-example-cron.log
+        maxAgeMinutes: 1500
+        successPatterns:
+          - completed
     notes: Grizzly Bulls Next.js app, deployed by the grizzly-bulls repo.
 
   - key: example-static
