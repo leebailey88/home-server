@@ -114,6 +114,61 @@ function assertExpectedBodyContains(value, label) {
   }
 }
 
+function assertRegexList(value, label) {
+  if (value === undefined || value === false) return;
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error(`${label} must be a non-empty array of regular expression strings, or false.`);
+  }
+
+  for (const [index, pattern] of value.entries()) {
+    if (typeof pattern !== 'string' || pattern.trim() === '') {
+      throw new Error(`${label}[${index}] must be a non-empty string.`);
+    }
+
+    try {
+      new RegExp(pattern);
+    } catch (error) {
+      throw new Error(`${label}[${index}] is not a valid regular expression: ${error.message}`);
+    }
+  }
+}
+
+function assertPositiveInteger(value, label) {
+  if (value === undefined) return;
+  if (!Number.isInteger(Number(value)) || Number(value) < 1) {
+    throw new Error(`${label} must be a positive integer. Received: ${value}`);
+  }
+}
+
+function assertCronJobs(value, label) {
+  if (value === undefined) return;
+  if (!Array.isArray(value)) {
+    throw new Error(`${label} must be an array of cron job monitor objects.`);
+  }
+
+  for (const [index, job] of value.entries()) {
+    const jobLabel = `${label}[${index}]`;
+
+    if (!job || typeof job !== 'object') {
+      throw new Error(`${jobLabel} must be an object.`);
+    }
+
+    if (job.enabled === false) continue;
+
+    const key = job.key ?? job.name;
+    if (typeof key !== 'string' || !/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(key)) {
+      throw new Error(`${jobLabel}.key must use lowercase letters, numbers, and hyphens.`);
+    }
+
+    assertSafePath(job.logPath, `${jobLabel}.logPath`);
+    assertPositiveInteger(job.maxAgeMinutes, `${jobLabel}.maxAgeMinutes`);
+    assertPositiveInteger(job.logTailBytes, `${jobLabel}.logTailBytes`);
+    assertRegexList(job.errorPatterns, `${jobLabel}.errorPatterns`);
+    assertRegexList(job.ignorePatterns, `${jobLabel}.ignorePatterns`);
+    assertRegexList(job.successPatterns, `${jobLabel}.successPatterns`);
+  }
+}
+
 function assertPublicHealthChecks(value, label) {
   if (value === undefined) return;
 
@@ -202,6 +257,8 @@ export function validateSitesConfig(config) {
   if (defaults.staticRootBase) {
     assertSafePath(defaults.staticRootBase, 'defaults.staticRootBase');
   }
+
+  assertCronJobs(config.cronJobs, 'cronJobs');
 
   if (cloudflared.service) {
     assertSafeUrl(cloudflared.service, 'cloudflared.service', { requireLoopback: true });
@@ -308,6 +365,7 @@ export function validateSitesConfig(config) {
       site.publicHealthChecks ?? site.publicUrls,
       `${site.key}.publicHealthChecks`,
     );
+    assertCronJobs(site.cronJobs, `${site.key}.cronJobs`);
   }
 }
 
@@ -319,22 +377,4 @@ export function findSiteOrThrow(sites, key) {
   }
 
   return site;
-}
-
-export function staticDeployRootForSite(site, defaults = {}) {
-  if (site.kind !== 'static') {
-    throw new Error(`Site ${site.key} is not a static site.`);
-  }
-
-  if (site.deployRoot) return site.deployRoot;
-
-  const staticRootBase = defaults.staticRootBase || '/opt/nuc-web/sites';
-  return path.join(staticRootBase, site.key);
-}
-
-export function nginxListenToUrl(listen) {
-  const normalized = listen.startsWith('localhost:')
-    ? listen.replace('localhost:', '127.0.0.1:')
-    : listen;
-  return `http://${normalized}`;
 }

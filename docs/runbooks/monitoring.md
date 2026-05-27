@@ -16,10 +16,12 @@ That check validates:
 
 - Nginx config syntax
 - `cloudflared.service` status, if installed
+- `cron.service` or `crond.service` status, unless disabled
 - each enabled site's upstream `healthUrl`, if configured
 - each enabled site's local Nginx route using the first configured hostname as the `Host` header
 - optional expected HTTP statuses and expected body text
 - optional public HTTPS checks through Cloudflare/DNS/Tunnel using `publicHealthChecks`
+- optional host-level and per-site cron jobs using `cronJobs`
 
 ## Site health check options
 
@@ -53,6 +55,71 @@ sites:
 
 Static sites can use the same `expectedStatus`, `expectedBodyContains`, and `publicHealthChecks` fields so the monitor verifies that Nginx is serving the right site, not merely returning a generic `index.html` fallback.
 
+## Cron job monitoring
+
+Cron monitoring is configured in the same `config/sites.yaml` registry so it works across all deployed sites, not only one app.
+
+Use top-level `cronJobs` for host-owned jobs:
+
+```yaml
+cronJobs:
+  - key: host-backup
+    logPath: /var/log/home-server-backup.log
+    maxAgeMinutes: 1500
+    successPatterns:
+      - Backup completed
+```
+
+Use per-site `cronJobs` for jobs owned by an app/site:
+
+```yaml
+sites:
+  - key: parcelwing
+    enabled: true
+    kind: proxy
+    hostnames:
+      - parcelwing.com
+    upstream: http://127.0.0.1:3000
+    healthUrl: http://127.0.0.1:3000/
+    expectedStatus: 200
+    expectedBodyContains: Parcel Wing
+    cronJobs:
+      - key: mail-node-health-check
+        logPath: /var/log/parcelwing-health-check.log
+        maxAgeMinutes: 10
+        successPatterns:
+          - Health check completed successfully
+      - key: mail-data-retention-prune
+        logPath: /var/log/parcelwing-mail-data-retention-prune.log
+        maxAgeMinutes: 1500
+        successPatterns:
+          - Mail data retention prune completed
+      - key: stripe-overage-report
+        logPath: /var/log/parcelwing-stripe-overage-report.log
+        maxAgeMinutes: 1500
+        successPatterns:
+          - Stripe overage usage report completed
+```
+
+Each enabled cron job monitor checks:
+
+- `logPath` exists and is a regular file
+- the log file was updated within `maxAgeMinutes`
+- the recent log tail does not match common error patterns like `ERROR`, `Failed`, `Exception`, or `Traceback`
+- optional `successPatterns` appear in the recent log tail
+- optional `errorPatterns` and `ignorePatterns` can tune detection per job
+
+Useful environment overrides:
+
+```bash
+HOME_SERVER_SKIP_CRON_CHECKS=false
+HOME_SERVER_SKIP_CRON_DAEMON_CHECK=false
+HOME_SERVER_CRON_MAX_AGE_MINUTES=1500
+HOME_SERVER_CRON_LOG_TAIL_BYTES=65536
+```
+
+If a newly deployed site has cron jobs but its first scheduled run has not happened yet, temporarily set that site's cron job entry to `enabled: false` or run the job once manually before enabling the monitor.
+
 ## Configure environment
 
 Create a local `.env` from the example:
@@ -70,6 +137,7 @@ HOME_SERVER_ENV_FILE=/home/lee/projects/home-server/.env
 HOME_SERVER_STATE_DIR=/var/lib/home-server
 HEALTH_TIMEOUT_MS=5000
 HOME_SERVER_SKIP_PUBLIC_HEALTH_CHECKS=false
+HOME_SERVER_SKIP_CRON_CHECKS=false
 ```
 
 Set Discord monitor webhooks:

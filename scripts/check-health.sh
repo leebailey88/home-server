@@ -18,4 +18,7 @@ fi
 log "Checking configured site upstreams and Nginx routes..."
 node "${SCRIPT_DIR}/check-sites-health.mjs"
 
+log "Checking cron daemon, cron logs, and configured site cron jobs..."
+node "${SCRIPT_DIR}/check-cron-health.mjs"
+
 log "Health check complete."
