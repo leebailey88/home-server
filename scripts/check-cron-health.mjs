@@ -15,11 +15,15 @@ const defaultErrorPatterns = [
   '\\bError:',
   '\\bFAILED\\b',
   '\\bFailed\\b',
-  '\\bfailed\\b',
+  '\\bFAILURE\\b',
+  '\\bFailure\\b',
   '\\bException\\b',
   '\\bTraceback\\b',
   '\\bUnhandledPromiseRejection\\b',
   '\\bERR_[A-Z0-9_]+\\b',
+  'exited with error code',
+  'command not found',
+  'No such file or directory',
 ];
 
 let failures = 0;
