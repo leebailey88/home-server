@@ -105,9 +105,11 @@ Each enabled cron job monitor checks:
 
 - `logPath` exists and is a regular file
 - the log file was updated within `maxAgeMinutes`
-- the recent log tail does not match common error patterns like `ERROR`, `Failed`, `Exception`, or `Traceback`
+- the recent log tail does not match high-signal error patterns like `ERROR`, `FAILED`, `Exception`, `Traceback`, `exited with error code`, `command not found`, or `No such file or directory`
 - optional `successPatterns` appear in the recent log tail
 - optional `errorPatterns` and `ignorePatterns` can tune detection per job
+
+The default patterns intentionally avoid matching every lowercase `failed` string so healthy JSON summaries like `"failed":0` do not cause false alarms. Add a per-job `errorPatterns` list when a specific cron script emits a custom failure phrase.
 
 Useful environment overrides:
 
