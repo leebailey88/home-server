@@ -29,6 +29,22 @@ sites:
       # - www.grizzlybulls.com
     upstream: http://127.0.0.1:8080
     healthUrl: http://127.0.0.1:8080/api/health
+    healthBodyContains: '"service":"grizzly-bulls"'
+    expectedStatus: 200
+    expectedBodyContains: Grizzly Bulls
+    # Public checks validate the Cloudflare Tunnel / DNS path from the NUC.
+    # Enable after public hostnames point through the tunnel.
+    publicHealthChecks:
+      - url: https://nuc-grizzly.grizzlybulls.com/api/health
+        expectedStatus: 200
+        expectedBodyContains: '"service":"grizzly-bulls"'
+      # Add these only when ready for production cutover:
+      # - url: https://grizzlybulls.com/api/health
+      #   expectedStatus: 200
+      #   expectedBodyContains: '"service":"grizzly-bulls"'
+      # - url: https://www.grizzlybulls.com/
+      #   expectedStatus: 200
+      #   expectedBodyContains: Grizzly Bulls
     notes: Grizzly Bulls Next.js app, deployed by the grizzly-bulls repo.
 
   - key: example-static
@@ -41,4 +57,10 @@ sites:
     deployRoot: /opt/nuc-web/sites/example-static
     root: /opt/nuc-web/sites/example-static/current
     index: index.html
+    expectedStatus: 200
+    expectedBodyContains: Example Static Site
+    publicHealthChecks:
+      - url: https://example.grizzlybulls.com/
+        expectedStatus: 200
+        expectedBodyContains: Example Static Site
     notes: Example direct static site served by Nginx.
