@@ -147,9 +147,11 @@ Set Discord monitor webhooks:
 ```bash
 DISCORD_MONITOR_WARNING_WEBHOOK_URL=https://discord.com/api/webhooks/...
 DISCORD_MONITOR_CRITICAL_WEBHOOK_URL=https://discord.com/api/webhooks/...
+# Optional. Defaults to the critical webhook so firing/recovery pairs stay together.
+DISCORD_MONITOR_RECOVERY_WEBHOOK_URL=https://discord.com/api/webhooks/...
 ```
 
-If only the warning webhook is set, failure alerts fall back to that webhook. Recovery alerts use the warning webhook.
+If only the warning webhook is set, failure and recovery alerts both fall back to that webhook. If the critical webhook is set, failure and recovery alerts both use it unless `DISCORD_MONITOR_RECOVERY_WEBHOOK_URL` is explicitly set.
 
 For first install, set `HOME_SERVER_SKIP_PUBLIC_HEALTH_CHECKS=true` only if public DNS/Tunnel routes are not ready yet. Flip it back to `false` once `curl https://grizzlybulls.com/api/health` succeeds from the NUC.
 
