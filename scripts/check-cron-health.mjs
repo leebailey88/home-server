@@ -41,8 +41,8 @@ function configuredCronJobs() {
   return [...topLevelJobs, ...siteJobs].filter((job) => job.enabled !== false);
 }
 
-function regexesFor(patterns) {
-  return patterns.map((pattern) => new RegExp(pattern, 'im'));
+function regexesFor(patterns, flags = 'm') {
+  return patterns.map((pattern) => new RegExp(pattern, flags));
 }
 
 function readTail(filePath, bytes) {
