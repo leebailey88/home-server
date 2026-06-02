@@ -22,8 +22,11 @@ function render(template, values) {
   });
 }
 
-fs.rmSync(outputDir, { recursive: true, force: true });
-fs.mkdirSync(outputDir, { recursive: true });
+const outputParentDir = path.dirname(outputDir);
+const outputBaseName = path.basename(outputDir);
+
+fs.mkdirSync(outputParentDir, { recursive: true });
+const stagingDir = fs.mkdtempSync(path.join(outputParentDir, `${outputBaseName}.tmp-`));
 
 if (enabledSites.length === 0) {
   console.warn('No enabled sites found. Generated directory will be empty.');
@@ -50,8 +53,11 @@ for (const site of enabledSites) {
     });
   }
 
-  fs.writeFileSync(path.join(outputDir, `${site.key}.conf`), rendered);
+  fs.writeFileSync(path.join(stagingDir, `${site.key}.conf`), rendered);
 }
+
+fs.rmSync(outputDir, { recursive: true, force: true });
+fs.renameSync(stagingDir, outputDir);
 
 console.log(
   `Rendered ${enabledSites.length} Nginx site config(s) from ${selectedConfigPath} into ${outputDir}`,

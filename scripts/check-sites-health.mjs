@@ -26,6 +26,14 @@ function normalizeCheck(input, fallback = {}) {
   return { ...fallback, ...input };
 }
 
+function concreteHostnameForCheck(hostname) {
+  if (hostname.startsWith('*.')) {
+    return `healthcheck.${hostname.slice(2)}`;
+  }
+
+  return hostname;
+}
+
 async function checkUrl(label, rawCheck, init = {}) {
   const check = normalizeCheck(rawCheck);
   const expectedStatuses = expectedStatusesFor(check);
@@ -97,20 +105,22 @@ for (const site of enabledSites) {
 
   const listen = site.nginxListen || defaults.nginxListen || '127.0.0.1:80';
   const nginxUrl = nginxListenToUrl(listen);
-  const firstHostname = site.hostnames[0];
+  for (const configuredHostname of site.hostnames) {
+    const hostname = concreteHostnameForCheck(configuredHostname);
 
-  await checkUrl(
-    `${site.key} local nginx route`,
-    {
-      ...siteExpectations,
-      url: nginxUrl,
-    },
-    {
-      headers: {
-        Host: firstHostname,
+    await checkUrl(
+      `${site.key} local nginx route (${hostname})`,
+      {
+        ...siteExpectations,
+        url: nginxUrl,
       },
-    },
-  );
+      {
+        headers: {
+          Host: hostname,
+        },
+      },
+    );
+  }
 
   const publicChecks = publicHealthChecksForSite(site);
   if (publicChecks.length > 0) {

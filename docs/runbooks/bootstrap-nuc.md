@@ -83,7 +83,7 @@ sudo bash scripts/bootstrap-nuc.sh
 sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/install-nginx-config.sh
 ```
 
-This renders the config, installs the generated server blocks into `/etc/nginx/sites-available/home-server`, writes the aggregate enabled config to `/etc/nginx/sites-enabled/home-server.conf`, runs `nginx -t`, and reloads Nginx.
+This renders the config into a temporary staging directory, backs up the currently managed Nginx config, installs the staged server blocks into `/etc/nginx/sites-available/home-server`, writes the aggregate enabled config to `/etc/nginx/sites-enabled/home-server.conf`, runs `nginx -t`, and reloads Nginx. If the config test fails, the script restores the previous managed config before exiting.
 
 ## 8. Configure Cloudflare Tunnel
 

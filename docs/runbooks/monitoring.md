@@ -18,7 +18,7 @@ That check validates:
 - `cloudflared.service` status, if installed
 - `cron.service` or `crond.service` status, unless disabled
 - each enabled site's upstream `healthUrl`, if configured
-- each enabled site's local Nginx route using the first configured hostname as the `Host` header
+- each enabled site's local Nginx route using every configured hostname as the `Host` header
 - optional expected HTTP statuses and expected body text
 - optional public HTTPS checks through Cloudflare/DNS/Tunnel using `publicHealthChecks`
 - optional host-level and per-site cron jobs using `cronJobs`
