@@ -140,6 +140,50 @@ function assertPositiveInteger(value, label) {
   }
 }
 
+function assertEnvVarName(value, label) {
+  if (typeof value !== 'string' || !/^[A-Z_][A-Z0-9_]*$/.test(value)) {
+    throw new Error(`${label} must be an environment variable name like ALTAMONT_IQ_SUPABASE_URL.`);
+  }
+}
+
+function assertSafeDatabaseIdentifier(value, label) {
+  if (typeof value !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) {
+    throw new Error(
+      `${label} must be a safe database identifier using letters, numbers, and underscores.`,
+    );
+  }
+}
+
+function assertSupabaseHeartbeat(value, label, { requireEnvFields = false } = {}) {
+  if (value === undefined || value === false) return;
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`${label} must be an object, false, or omitted.`);
+  }
+
+  if (value.enabled === false) return;
+
+  if (requireEnvFields || value.urlEnv !== undefined) {
+    assertEnvVarName(value.urlEnv, `${label}.urlEnv`);
+  }
+
+  if (requireEnvFields || value.serviceRoleKeyEnv !== undefined) {
+    assertEnvVarName(value.serviceRoleKeyEnv, `${label}.serviceRoleKeyEnv`);
+  }
+
+  if (value.table !== undefined) {
+    assertSafeDatabaseIdentifier(value.table, `${label}.table`);
+  }
+
+  if (value.id !== undefined) {
+    assertNoNginxControlChars(value.id, `${label}.id`);
+  }
+
+  if (value.source !== undefined) {
+    assertNoNginxControlChars(value.source, `${label}.source`);
+  }
+}
+
 function assertCronJobs(value, label) {
   if (value === undefined) return;
   if (!Array.isArray(value)) {
@@ -268,6 +312,10 @@ export function validateSitesConfig(config) {
     assertSafePath(defaults.staticRootBase, 'defaults.staticRootBase');
   }
 
+  assertSupabaseHeartbeat(defaults.supabaseHeartbeat, 'defaults.supabaseHeartbeat', {
+    requireEnvFields: false,
+  });
+
   assertCronJobs(config.cronJobs, 'cronJobs');
 
   if (cloudflared.service) {
@@ -375,6 +423,24 @@ export function validateSitesConfig(config) {
       site.publicHealthChecks ?? site.publicUrls,
       `${site.key}.publicHealthChecks`,
     );
+
+    assertSupabaseHeartbeat(site.supabaseHeartbeat, `${site.key}.supabaseHeartbeat`, {
+      requireEnvFields: false,
+    });
+
+    if (site.supabaseHeartbeat !== undefined && site.supabaseHeartbeat !== false) {
+      const defaultHeartbeat =
+        defaults.supabaseHeartbeat && typeof defaults.supabaseHeartbeat === 'object'
+          ? defaults.supabaseHeartbeat
+          : {};
+
+      assertSupabaseHeartbeat(
+        { ...defaultHeartbeat, ...site.supabaseHeartbeat },
+        `${site.key}.supabaseHeartbeat`,
+        { requireEnvFields: true },
+      );
+    }
+
     assertCronJobs(site.cronJobs, `${site.key}.cronJobs`);
   }
 }

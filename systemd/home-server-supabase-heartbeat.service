@@ -1,0 +1,11 @@
+[Unit]
+Description=Home Server Supabase heartbeat
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory={{REPO_ROOT}}
+Environment=HOME_SERVER_ENV_FILE={{ENV_FILE}}
+Environment=HOME_SERVER_STATE_DIR={{STATE_DIR}}
+ExecStart=/usr/bin/env bash {{REPO_ROOT}}/scripts/run-supabase-heartbeat.sh
