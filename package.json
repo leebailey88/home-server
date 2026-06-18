@@ -20,7 +20,7 @@
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
     "lint:shell": "bash scripts/lint-shell.sh",
     "validate": "pnpm format:check && pnpm lint:md && pnpm lint:shell && pnpm validate:sites && pnpm render:nginx && pnpm render:cloudflared",
-    "heartbeat:supabase": "node scripts/supabase-heartbeat.mjs"
+    "heartbeat:supabase": "bash scripts/run-supabase-heartbeat.sh"
   },
   "dependencies": {
     "yaml": "^2.8.1"
