@@ -6,6 +6,11 @@ defaults:
   accessLogDir: '/var/log/nginx'
   staticRootBase: '/opt/nuc-web/sites'
 
+  supabaseHeartbeat:
+    table: keepalive_heartbeat
+    id: supabase-free-plan-heartbeat
+    source: home-server-nuc
+
 # Host-level cron jobs that are not owned by a specific site can be monitored here.
 # Cron logs are checked for freshness plus common error patterns such as ERROR,
 # Failed, Exception, and Traceback.
@@ -56,6 +61,14 @@ sites:
       # - url: https://www.grizzlybulls.com/
       #   expectedStatus: 200
       #   expectedBodyContains: Grizzly Bulls
+
+    # Optional Supabase heartbeat. Enable for free Supabase projects that should
+    # receive a tiny periodic DB upsert from the NUC. Store real secrets in .env
+    # or the env file used by scripts/install-supabase-heartbeat-service.sh.
+    supabaseHeartbeat:
+      enabled: false
+      urlEnv: GRIZZLY_BULLS_SUPABASE_URL
+      serviceRoleKeyEnv: GRIZZLY_BULLS_SUPABASE_SERVICE_ROLE_KEY
     cronJobs:
       - key: grizzly-bulls-example
         enabled: false
