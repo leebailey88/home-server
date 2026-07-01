@@ -1,0 +1,175 @@
+# Copy this file to config/sites.yaml on the NUC and edit it there.
+# Keep upstream apps bound to 127.0.0.1 only.
+
+defaults:
+  nginxListen: '127.0.0.1:80'
+  accessLogDir: '/var/log/nginx'
+  staticRootBase: '/opt/nuc-web/sites'
+
+# Optional values used by scripts/render-cloudflared-config.mjs.
+# Keep SSH and public web routing conceptually separate; SSH can continue to use
+# ssh.grizzlybulls.com through Cloudflare Access.
+cloudflared:
+  tunnel: 434e8655-1dcd-49da-b517-4c79b4a42a06
+  credentialsFile: /etc/cloudflared/434e8655-1dcd-49da-b517-4c79b4a42a06.json
+  service: http://127.0.0.1:80
+
+cronJobs:
+  - key: money-bot-indicators-primary
+    logPath: /var/log/money-bot-indicators-primary.log
+    maxAgeMinutes: 4500
+
+sites:
+  - key: grizzly-bulls
+    enabled: true
+    kind: proxy
+    hostnames:
+      - nuc-grizzly.grizzlybulls.com
+      # uncomment below when ready to host prod on the Nuc
+      - grizzlybulls.com
+      - www.grizzlybulls.com
+    upstream: http://127.0.0.1:8080
+    healthUrl: http://127.0.0.1:8080/api/health
+    publicHealthChecks:
+      - url: https://grizzlybulls.com/api/health
+        expectedStatus: 200
+        expectedBodyContains: '"service":"grizzly-bulls"'
+      - url: https://www.grizzlybulls.com/
+        expectedStatus: 200
+        expectedBodyContains: Grizzly Bulls
+    cronJobs:
+      - key: runtime-data-refresh
+        logPath: /var/log/grizzly-bulls-runtime-data.log
+        maxAgeMinutes: 4500
+    notes: Grizzly Bulls Next.js app, deployed by the grizzly-bulls repo.
+
+  - key: parcelwing
+    enabled: true
+    kind: proxy
+    hostnames:
+      - nuc-parcelwing.grizzlybulls.com
+      # Add these only when ready for production cutover:
+      - parcelwing.com
+      - www.parcelwing.com
+      - '*.parcelwing.com'
+    upstream: http://127.0.0.1:3000
+    healthUrl: http://127.0.0.1:3000/
+    supabaseHeartbeat:
+      enabled: true
+      urlEnv: PARCELWING_SUPABASE_URL
+      serviceRoleKeyEnv: PARCELWING_SUPABASE_SERVICE_ROLE_KEY
+    expectedStatus: 200
+    publicHealthChecks:
+      - url: https://nuc-parcelwing.grizzlybulls.com/
+        expectedStatus: 200
+        expectedBodyContains: Parcel Wing
+      # Add these only after production DNS cutover:
+      - url: https://parcelwing.com/
+        expectedStatus: 200
+        expectedBodyContains: Parcel Wing
+      - url: https://www.parcelwing.com/
+        expectedStatus: 200
+        expectedBodyContains: Parcel Wing
+      - url: https://admin.parcelwing.com/login
+        expectedStatus: 200
+        expectedBodyContains: Parcel Wing
+    cronJobs:
+      - key: mail-node-health-check
+        logPath: /var/log/parcelwing-health-check.log
+        maxAgeMinutes: 10
+
+      - key: mail-data-retention-prune
+        logPath: /var/log/parcelwing-mail-data-retention-prune.log
+        maxAgeMinutes: 1500
+
+      - key: stripe-overage-report
+        logPath: /var/log/parcelwing-stripe-overage-report.log
+        maxAgeMinutes: 1500
+    notes: Parcel Wing Next.js app, deployed by the parcelwing repo.
+
+  - key: altamont-iq
+    enabled: true
+    kind: proxy
+    hostnames:
+      - nuc-altamont.grizzlybulls.com
+      # Add these only when ready for production cutover:
+      - altamontiq.com
+      - www.altamontiq.com
+      - '*.altamontiq.com'
+    upstream: http://127.0.0.1:8082
+    healthUrl: http://127.0.0.1:8082/api/health
+    supabaseHeartbeat:
+      enabled: true
+      urlEnv: ALTAMONT_IQ_SUPABASE_URL
+      serviceRoleKeyEnv: ALTAMONT_IQ_SUPABASE_SERVICE_ROLE_KEY
+    healthBodyContains: '"service":"altamont-iq"'
+    expectedStatus: 200
+    expectedBodyContains: Altamont IQ
+    publicHealthChecks:
+      - url: https://nuc-altamont.grizzlybulls.com/api/health
+        expectedStatus: 200
+        expectedBodyContains: '"service":"altamont-iq"'
+      # Enable after production DNS cutover:
+      - url: https://altamontiq.com/api/health
+        expectedStatus: 200
+        expectedBodyContains: '"service":"altamont-iq"'
+      - url: https://www.altamontiq.com/
+        expectedStatus: 200
+        expectedBodyContains: Altamont IQ
+    notes: Altamont IQ Next.js app, deployed by the altamont-iq repo.
+
+  - key: community-bank-pilot
+    enabled: true
+    kind: proxy
+    hostnames:
+      - communitybankpilot.com
+      - www.communitybankpilot.com
+    upstream: http://127.0.0.1:8083
+    healthUrl: http://127.0.0.1:8083/api/health
+    healthBodyContains: '"service":"community-bank-pilot"'
+    expectedStatus: 200
+    supabaseHeartbeat:
+      enabled: true
+      urlEnv: COMMUNITY_BANK_PILOT_SUPABASE_URL
+      serviceRoleKeyEnv: COMMUNITY_BANK_PILOT_SUPABASE_SERVICE_ROLE_KEY
+    publicHealthChecks:
+      - url: https://communitybankpilot.com/
+        expectedStatus: 200
+        expectedBodyContains: Community Bank Pilot
+      - url: https://www.communitybankpilot.com/
+        expectedStatus: 200
+        expectedBodyContains: Community Bank Pilot
+    cronJobs:
+      - key: community-bank-pilot-health-check
+        logPath: /var/log/community-bank-pilot-health-check.log
+        maxAgeMinutes: 5
+        successPatterns:
+          - Health check completed successfully
+    notes: Community Bank Pilot marketing/app site, deployed by the community-bank-pilot repo.
+
+  - key: fed-funds-api
+    enabled: true
+    kind: proxy
+    hostnames:
+      - fed-funds-api.grizzlybulls.com
+    upstream: http://127.0.0.1:4120
+    healthUrl: http://127.0.0.1:4120/healthz
+    healthBodyContains: fed-funds-futures-bridge
+    expectedStatus: 200
+    publicHealthChecks:
+      - url: https://fed-funds-api.grizzlybulls.com/healthz
+        expectedStatus: 200
+        expectedBodyContains: fed-funds-futures-bridge
+    notes: Fed Funds futures bridge API from money-bot, protected by bearer token for curve endpoint.
+
+  - key: example-static
+    enabled: false
+    kind: static
+    hostnames:
+      - example.grizzlybulls.com
+    # Static deploys are atomic: scripts/deploy-static-site.mjs copies a build
+    # into deployRoot/releases/<timestamp> and points root/current at it.
+    deployRoot: /opt/nuc-web/sites/example-static
+    root: /opt/nuc-web/sites/example-static/current
+    index: index.html
+    notes: Example direct static site served by Nginx.

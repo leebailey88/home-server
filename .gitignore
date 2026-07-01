@@ -6,7 +6,6 @@ node_modules/
 .env
 .env.*
 !.env.example
-config/sites.yaml
 config/cloudflared.yml
 
 # generated files
