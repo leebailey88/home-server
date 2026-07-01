@@ -28,9 +28,9 @@ install_packages() {
 }
 
 create_user_and_dirs() {
-  getent group "${SFTP_GROUP}" >/dev/null || groupadd --system "${SFTP_GROUP}"
+  getent group "${SFTP_GROUP}" > /dev/null || groupadd --system "${SFTP_GROUP}"
 
-  if ! id "${SFTP_USER}" >/dev/null 2>&1; then
+  if ! id "${SFTP_USER}" > /dev/null 2>&1; then
     useradd \
       --system \
       --gid "${SFTP_GROUP}" \
@@ -41,7 +41,7 @@ create_user_and_dirs() {
     usermod --gid "${SFTP_GROUP}" --home "${CHROOT_DIR}" --shell /usr/sbin/nologin "${SFTP_USER}"
   fi
 
-  passwd -l "${SFTP_USER}" >/dev/null || true
+  passwd -l "${SFTP_USER}" > /dev/null || true
 
   # OpenSSH requires the chroot and each parent component to be root-owned and not writable by the SFTP user.
   install -d -o root -g root -m 0755 "${CHROOT_DIR}"
@@ -58,10 +58,10 @@ create_user_and_dirs() {
 
   if [[ -n "${PUBLIC_KEY}" ]]; then
     if ! grep -qxF "${PUBLIC_KEY}" "${AUTHORIZED_KEYS_DIR}/authorized_keys"; then
-      printf '%s\n' "${PUBLIC_KEY}" >>"${AUTHORIZED_KEYS_DIR}/authorized_keys"
+      printf '%s\n' "${PUBLIC_KEY}" >> "${AUTHORIZED_KEYS_DIR}/authorized_keys"
     fi
   elif ! grep -q "PASTE_EVABANK_PUBLIC_KEY_HERE" "${AUTHORIZED_KEYS_DIR}/authorized_keys"; then
-    cat >>"${AUTHORIZED_KEYS_DIR}/authorized_keys" <<'KEYNOTE'
+    cat >> "${AUTHORIZED_KEYS_DIR}/authorized_keys" << 'KEYNOTE'
 # PASTE_EVABANK_PUBLIC_KEY_HERE
 # Example:
 # ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... evabank-dashboard-upload
@@ -78,7 +78,7 @@ write_sshd_config() {
     match_line="Match User ${SFTP_USER}"
   fi
 
-  cat >"${SSHD_DROPIN}" <<CONF
+  cat > "${SSHD_DROPIN}" << CONF
 # Managed by home-server/scripts/setup-cbp-sftp.sh
 # Community Bank Pilot restricted SFTP endpoint.
 
@@ -105,7 +105,7 @@ CONF
 }
 
 write_spooler() {
-  cat >/usr/local/bin/cbp-sftp-spool.sh <<'SPOOL'
+  cat > /usr/local/bin/cbp-sftp-spool.sh << 'SPOOL'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -164,7 +164,7 @@ SPOOL
 
   chmod 0755 /usr/local/bin/cbp-sftp-spool.sh
 
-  cat >/etc/systemd/system/cbp-sftp-spool.service <<SERVICE
+  cat > /etc/systemd/system/cbp-sftp-spool.service << SERVICE
 [Unit]
 Description=Community Bank Pilot SFTP spooler
 
@@ -176,7 +176,7 @@ Environment=CBP_SFTP_SPOOL_DIR=${SPOOL_DIR}
 ExecStart=/usr/local/bin/cbp-sftp-spool.sh
 SERVICE
 
-  cat >/etc/systemd/system/cbp-sftp-spool.timer <<'TIMER'
+  cat > /etc/systemd/system/cbp-sftp-spool.timer << 'TIMER'
 [Unit]
 Description=Run Community Bank Pilot SFTP spooler every 5 minutes
 
@@ -195,7 +195,7 @@ TIMER
 }
 
 configure_ufw_if_active() {
-  if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
+  if command -v ufw > /dev/null 2>&1 && ufw status | grep -q "Status: active"; then
     if [[ -n "${SOURCE_CIDR}" ]]; then
       ufw allow from "${SOURCE_CIDR}" to any port "${SFTP_PORT}" proto tcp comment "CBP EvaBank SFTP"
     else

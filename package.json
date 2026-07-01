@@ -17,11 +17,14 @@
     "static:rollback": "node scripts/rollback-static-site.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "validate": "pnpm format && pnpm lint:md && pnpm lint:shell && pnpm validate:sites && pnpm render:nginx && pnpm render:cloudflared",
+    "validate:check": "pnpm format:check && pnpm lint:md && pnpm lint:shell && pnpm validate:sites && pnpm render:nginx && pnpm render:cloudflared",
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
     "lint:shell": "bash scripts/lint-shell.sh",
-    "validate": "pnpm format:check && pnpm lint:md && pnpm lint:shell && pnpm validate:sites && pnpm render:nginx && pnpm render:cloudflared",
     "heartbeat:supabase": "bash scripts/run-supabase-heartbeat.sh",
-    "setup:sftp": "sudo bash scripts/setup-cbp-sftp.sh"
+    "setup:sftp": "sudo bash scripts/setup-cbp-sftp.sh",
+    "monitor:external": "node scripts/external-uptime-monitor.mjs",
+    "install:external-monitor": "sudo bash scripts/install-external-uptime-monitor.sh"
   },
   "dependencies": {
     "yaml": "^2.8.1"
