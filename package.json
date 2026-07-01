@@ -24,10 +24,13 @@
     "heartbeat:supabase": "bash scripts/run-supabase-heartbeat.sh",
     "setup:sftp": "sudo bash scripts/setup-cbp-sftp.sh",
     "monitor:external": "node scripts/external-uptime-monitor.mjs",
-    "install:external-monitor": "sudo bash scripts/install-external-uptime-monitor.sh"
+    "install:external-monitor": "sudo bash scripts/install-external-uptime-monitor.sh",
+    "monitor:synthetic:cbp": "node scripts/synthetic/cbp-authenticated-smoke.mjs",
+    "install:synthetic-monitor": "sudo bash scripts/install-cbp-synthetic-monitor.sh"
   },
   "dependencies": {
-    "yaml": "^2.8.1"
+    "yaml": "^2.8.1",
+    "playwright": "^1.54.2"
   },
   "devDependencies": {
     "markdownlint-cli2": "^0.18.1",
