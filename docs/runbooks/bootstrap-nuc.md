@@ -54,7 +54,9 @@ At minimum, make sure `HOME_SERVER_CONFIG` points at the real NUC checkout path:
 HOME_SERVER_CONFIG=/home/lee/projects/home-server/config/sites.yaml
 ```
 
-Add Discord monitor webhooks later if desired.
+Restore production-only values such as Discord webhooks and Supabase service
+credentials from a secure backup. The `.env` file is intentionally excluded
+from Git and must be restored separately when replacing the NUC.
 
 ## 5. Validate and render config locally
 
@@ -165,7 +167,32 @@ sudo journalctl -u home-server-gateway-monitor.service -o cat -n 100
 
 See `docs/runbooks/monitoring.md` for alert behavior and operations.
 
-## 11. Deploy Grizzly Bulls separately
+## 11. Install the Supabase heartbeat
+
+After restoring the production `.env`, run:
+
+```bash
+sudo bash scripts/install-supabase-heartbeat-service.sh
+```
+
+The installer defaults to the checkout's `.env` and an eight-hour cadence. It
+preflights every configured heartbeat before changing systemd, writes durable
+service and timer drop-ins, runs the installed service, and prints the next
+scheduled timer run.
+
+Verify it with:
+
+```bash
+sudo systemctl is-enabled home-server-supabase-heartbeat.timer
+sudo systemctl is-active home-server-supabase-heartbeat.timer
+sudo systemctl list-timers home-server-supabase-heartbeat.timer --all
+sudo journalctl -u home-server-supabase-heartbeat.service -o cat -n 50
+```
+
+See `docs/runbooks/supabase-heartbeat.md` for table setup, recovery, and
+troubleshooting.
+
+## 12. Deploy Grizzly Bulls separately
 
 From the `grizzly-bulls` repo on WSL:
 
