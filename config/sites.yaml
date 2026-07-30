@@ -124,6 +124,7 @@ sites:
     hostnames:
       - communitybankpilot.com
       - www.communitybankpilot.com
+      - '*.communitybankpilot.com'
     upstream: http://127.0.0.1:8083
     healthUrl: http://127.0.0.1:8083/api/health
     healthBodyContains: '"service":"community-bank-pilot"'
