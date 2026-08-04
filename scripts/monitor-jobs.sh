@@ -7,11 +7,12 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 
 ENV_FILE="${HOME_SERVER_ENV_FILE:-${REPO_ROOT}/.env}"
-STATE_DIR="${HOME_SERVER_STATE_DIR:-/var/lib/home-server}"
-STATE_FILE="${STATE_DIR}/jobs-monitor.state"
 HOSTNAME_VALUE="$(hostname -f 2> /dev/null || hostname)"
 
 load_env_file "${ENV_FILE}"
+
+STATE_DIR="${HOME_SERVER_STATE_DIR:-/var/lib/home-server}"
+STATE_FILE="${STATE_DIR}/jobs-monitor.state"
 
 mkdir -p "${STATE_DIR}"
 
