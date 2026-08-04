@@ -7,12 +7,12 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 
 ENV_FILE="${HOME_SERVER_ENV_FILE:-${REPO_ROOT}/.env}"
-STATE_DIR="${HOME_SERVER_STATE_DIR:-/var/lib/home-server}"
-STATE_FILE="${STATE_DIR}/gateway-monitor.state"
 HOSTNAME_VALUE="$(hostname -f 2> /dev/null || hostname)"
 
 load_env_file "${ENV_FILE}"
 
+STATE_DIR="${HOME_SERVER_STATE_DIR:-/var/lib/home-server}"
+STATE_FILE="${STATE_DIR}/gateway-monitor.state"
 RETRY_COUNT="${HOME_SERVER_GATEWAY_RETRY_COUNT:-1}"
 RETRY_DELAY_SECONDS="${HOME_SERVER_GATEWAY_RETRY_DELAY_SECONDS:-5}"
 
