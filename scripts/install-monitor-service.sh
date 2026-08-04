@@ -9,6 +9,8 @@ source "${SCRIPT_DIR}/lib/common.sh"
 require_root
 
 ENV_FILE="${HOME_SERVER_ENV_FILE:-${REPO_ROOT}/.env}"
+load_env_file "${ENV_FILE}"
+
 STATE_DIR="${HOME_SERVER_STATE_DIR:-/var/lib/home-server}"
 GATEWAY_ON_BOOT_SEC="${HOME_SERVER_MONITOR_ON_BOOT_SEC:-2min}"
 GATEWAY_INTERVAL="${HOME_SERVER_MONITOR_INTERVAL:-5min}"
