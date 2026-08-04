@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import process from 'node:process';
 import { loadSitesConfig } from './lib/sites-config.mjs';
+import { evaluateCronLogState } from './lib/cron-log-state.mjs';
 
 const { config, enabledSites, selectedConfigPath } = loadSitesConfig();
 const now = Date.now();
@@ -138,17 +139,24 @@ function checkJob(job) {
     .split(/\r?\n/)
     .filter(Boolean)
     .filter((line) => !ignorePatterns.some((pattern) => pattern.test(line)));
-
-  const matchingLine = relevantLines.find((line) =>
-    errorPatterns.some((pattern) => pattern.test(line)),
-  );
-  if (matchingLine) {
-    fail(label, `recent log output matched an error pattern: ${matchingLine.slice(0, 500)}`);
-  }
-
   const successPatterns = regexesFor(job.successPatterns || []);
-  if (successPatterns.length > 0 && !successPatterns.some((pattern) => pattern.test(tail))) {
-    fail(label, `recent log output did not match any configured successPatterns`);
+  const logState = evaluateCronLogState({
+    lines: relevantLines,
+    errorPatterns,
+    successPatterns,
+  });
+
+  if (!logState.ok) {
+    if (logState.reason === 'missing-success') {
+      fail(label, 'recent log output did not match any configured successPatterns');
+    } else {
+      fail(
+        label,
+        `latest failure is newer than latest success: ${logState.lastError.line.slice(0, 500)}`,
+      );
+    }
+  } else if (logState.reason === 'success-after-error') {
+    ok(label, 'latest success is newer than previous error output');
   }
 }
 
