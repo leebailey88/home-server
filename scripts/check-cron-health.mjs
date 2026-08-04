@@ -149,11 +149,13 @@ function checkJob(job) {
   if (!logState.ok) {
     if (logState.reason === 'missing-success') {
       fail(label, 'recent log output did not match any configured successPatterns');
-    } else {
+    } else if (logState.reason === 'error-after-success') {
       fail(
         label,
         `latest failure is newer than latest success: ${logState.lastError.line.slice(0, 500)}`,
       );
+    } else {
+      fail(label, `recent log output matched an error pattern: ${logState.lastError.line.slice(0, 500)}`);
     }
   } else if (logState.reason === 'success-after-error') {
     ok(label, 'latest success is newer than previous error output');
