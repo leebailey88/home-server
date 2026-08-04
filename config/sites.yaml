@@ -41,6 +41,8 @@ sites:
       - key: runtime-data-refresh
         logPath: /var/log/grizzly-bulls-runtime-data.log
         maxAgeMinutes: 4500
+        successPatterns:
+          - Runtime data refresh complete
     notes: Grizzly Bulls Next.js app, deployed by the grizzly-bulls repo.
 
   - key: parcelwing

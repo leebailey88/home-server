@@ -9,6 +9,7 @@
   },
   "packageManager": "pnpm@11.2.2",
   "scripts": {
+    "test": "node --test tests/*.test.mjs",
     "validate:sites": "node scripts/validate-sites-config.mjs",
     "render:nginx": "node scripts/render-nginx-config.mjs",
     "render:cloudflared": "node scripts/render-cloudflared-config.mjs",
@@ -17,8 +18,8 @@
     "static:rollback": "node scripts/rollback-static-site.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "validate": "pnpm format && pnpm lint:md && pnpm lint:shell && pnpm validate:sites && pnpm render:nginx && pnpm render:cloudflared",
-    "validate:check": "pnpm format:check && pnpm lint:md && pnpm lint:shell && pnpm validate:sites && pnpm render:nginx && pnpm render:cloudflared",
+    "validate": "pnpm format && pnpm lint:md && pnpm lint:shell && pnpm test && pnpm validate:sites && pnpm render:nginx && pnpm render:cloudflared",
+    "validate:check": "pnpm format:check && pnpm lint:md && pnpm lint:shell && pnpm test && pnpm validate:sites && pnpm render:nginx && pnpm render:cloudflared",
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
     "lint:shell": "bash scripts/lint-shell.sh",
     "heartbeat:supabase": "bash scripts/run-supabase-heartbeat.sh",
