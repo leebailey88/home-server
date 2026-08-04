@@ -8,10 +8,7 @@ const successPatterns = [/Runtime data refresh complete/];
 
 test('a newer success clears an older error', () => {
   const state = evaluateCronLogState({
-    lines: [
-      'Error: refresh failed',
-      'Runtime data refresh complete',
-    ],
+    lines: ['Error: refresh failed', 'Runtime data refresh complete'],
     errorPatterns,
     successPatterns,
   });
@@ -22,10 +19,7 @@ test('a newer success clears an older error', () => {
 
 test('a newer error remains firing after an older success', () => {
   const state = evaluateCronLogState({
-    lines: [
-      'Runtime data refresh complete',
-      'Error: refresh failed',
-    ],
+    lines: ['Runtime data refresh complete', 'Error: refresh failed'],
     errorPatterns,
     successPatterns,
   });
