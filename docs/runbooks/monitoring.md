@@ -1,31 +1,106 @@
-# Gateway monitoring runbook
+# Home server monitoring runbook
 
-The gateway monitor is optional and opt-in. It runs the same local health checks as `scripts/check-health.sh`, stores a small firing/recovered state file, and sends Discord alerts when the gateway first fails and when it recovers.
+The NUC uses two independent local monitors so web availability and background
+job health cannot be confused with each other:
 
-Discord remains the primary alerting channel. Set both monitor webhooks in `.env` before installing the timer.
+- `home-server-gateway-monitor` checks the web gateway and public routes. A
+  persistent failure is critical.
+- `home-server-jobs-monitor` checks cron and configured background-job logs. A
+  failure is a warning and does not imply that the web gateway is unavailable.
 
-## What it checks
+Both monitors keep a small state file and send Discord notifications only on a
+transition into failure and on the first recovery.
 
-The monitor wraps:
+## Gateway monitor
+
+The gateway monitor wraps:
 
 ```bash
 bash scripts/check-health.sh
 ```
 
-That check validates:
+It validates:
 
-- Nginx config syntax
+- Nginx configuration syntax
 - `cloudflared.service` status, if installed
-- `cron.service` or `crond.service` status, unless disabled
 - each enabled site's upstream `healthUrl`, if configured
-- each enabled site's local Nginx route using every configured hostname as the `Host` header
-- optional expected HTTP statuses and expected body text
-- optional public HTTPS checks through Cloudflare/DNS/Tunnel using `publicHealthChecks`
-- optional host-level and per-site cron jobs using `cronJobs`
+- each enabled site's local Nginx routes using the configured hostnames
+- optional expected HTTP statuses and response text
+- optional public HTTPS checks through Cloudflare, DNS, and the tunnel
+
+Background jobs are intentionally not part of this check.
+
+### Gateway debounce
+
+A failed gateway check is immediately retried before Discord fires. Defaults:
+
+```text
+HOME_SERVER_GATEWAY_RETRY_COUNT=1
+HOME_SERVER_GATEWAY_RETRY_DELAY_SECONDS=5
+```
+
+This filters a brief DNS, Cloudflare, or network hiccup without waiting for the
+next five-minute timer run. If the retry also fails, the monitor enters
+`firing` and sends a critical alert.
+
+Failure alerts contain the failing or warning lines first rather than the
+beginning of the full health-check transcript. The complete transcript remains
+available in the systemd journal.
+
+## Background job monitor
+
+The job monitor wraps:
+
+```bash
+bash scripts/check-jobs-health.sh
+```
+
+It checks:
+
+- `cron.service` or `crond.service`, unless disabled
+- host-level `cronJobs` from `config/sites.yaml`
+- per-site `cronJobs` from `config/sites.yaml`
+- log-file existence and freshness
+- configured success markers
+- high-signal error patterns such as `ERROR`, `Error:`, `FAILED`, `Exception`,
+  `Traceback`, `exited with error code`, `command not found`, and
+  `No such file or directory`
+
+Job failures are sent as warning-level `home-server-jobs` alerts, not critical
+`home-server-gateway` alerts.
+
+### Run-state-aware log checks
+
+For jobs with `successPatterns`, the checker compares the latest matching
+success with the latest matching error in the log tail:
+
+- newer success than error: healthy
+- newer error than success: failed
+- no success marker in the retained tail: failed
+
+This prevents an old error from keeping a job in a false firing state after a
+newer run has completed successfully.
+
+Jobs without `successPatterns` retain the conservative legacy behavior: any
+matching error in the retained log tail is treated as a current failure. Add a
+stable completion marker whenever a job has one.
+
+Example:
+
+```yaml
+sites:
+  - key: grizzly-bulls
+    cronJobs:
+      - key: runtime-data-refresh
+        logPath: /var/log/grizzly-bulls-runtime-data.log
+        maxAgeMinutes: 4500
+        successPatterns:
+          - Runtime data refresh complete
+```
 
 ## Site health check options
 
-Each enabled site can opt into deeper checks in `config/sites.yaml`:
+Each enabled site can opt into deeper gateway checks in `config/sites.yaml`:
 
 ```yaml
 sites:
@@ -38,13 +113,7 @@ sites:
       - www.grizzlybulls.com
     upstream: http://127.0.0.1:8080
     healthUrl: http://127.0.0.1:8080/api/health
-    healthBodyContains: '"service":"grizzly-bulls"'
-    expectedStatus: 200
-    expectedBodyContains: Grizzly Bulls
     publicHealthChecks:
-      - url: https://nuc-grizzly.grizzlybulls.com/api/health
-        expectedStatus: 200
-        expectedBodyContains: '"service":"grizzly-bulls"'
       - url: https://grizzlybulls.com/api/health
         expectedStatus: 200
         expectedBodyContains: '"service":"grizzly-bulls"'
@@ -53,196 +122,135 @@ sites:
         expectedBodyContains: Grizzly Bulls
 ```
 
-Static sites can use the same `expectedStatus`, `expectedBodyContains`, and `publicHealthChecks` fields so the monitor verifies that Nginx is serving the right site, not merely returning a generic `index.html` fallback.
+Static sites can use the same `expectedStatus`, `expectedBodyContains`, and
+`publicHealthChecks` fields.
 
-## Cron job monitoring
+## Environment
 
-Cron monitoring is configured in the same `config/sites.yaml` registry so it works across all deployed sites, not only one app.
-
-Use top-level `cronJobs` for host-owned jobs:
-
-```yaml
-cronJobs:
-  - key: host-backup
-    logPath: /var/log/home-server-backup.log
-    maxAgeMinutes: 1500
-    successPatterns:
-      - Backup completed
-```
-
-Use per-site `cronJobs` for jobs owned by an app/site:
-
-```yaml
-sites:
-  - key: parcelwing
-    enabled: true
-    kind: proxy
-    hostnames:
-      - parcelwing.com
-    upstream: http://127.0.0.1:3000
-    healthUrl: http://127.0.0.1:3000/
-    expectedStatus: 200
-    expectedBodyContains: Parcel Wing
-    cronJobs:
-      - key: mail-node-health-check
-        logPath: /var/log/parcelwing-health-check.log
-        maxAgeMinutes: 10
-        successPatterns:
-          - Health check completed successfully
-      - key: mail-data-retention-prune
-        logPath: /var/log/parcelwing-mail-data-retention-prune.log
-        maxAgeMinutes: 1500
-        successPatterns:
-          - Mail data retention prune completed
-      - key: stripe-overage-report
-        logPath: /var/log/parcelwing-stripe-overage-report.log
-        maxAgeMinutes: 1500
-        successPatterns:
-          - Stripe overage usage report completed
-```
-
-Each enabled cron job monitor checks:
-
-- `logPath` exists and is a regular file
-- the log file was updated within `maxAgeMinutes`
-- the recent log tail does not match high-signal error patterns like `ERROR`, `FAILED`, `Exception`, `Traceback`, `exited with error code`, `command not found`, or `No such file or directory`
-- optional `successPatterns` appear in the recent log tail
-- optional `errorPatterns` and `ignorePatterns` can tune detection per job
-
-The default patterns intentionally avoid matching every lowercase `failed` string so healthy JSON summaries like `"failed":0` do not cause false alarms. Add a per-job `errorPatterns` list when a specific cron script emits a custom failure phrase.
-
-Useful environment overrides:
-
-```bash
-HOME_SERVER_SKIP_CRON_CHECKS=false
-HOME_SERVER_SKIP_CRON_DAEMON_CHECK=false
-HOME_SERVER_CRON_MAX_AGE_MINUTES=1500
-HOME_SERVER_CRON_LOG_TAIL_BYTES=65536
-```
-
-If a newly deployed site has cron jobs but its first scheduled run has not happened yet, temporarily set that site's cron job entry to `enabled: false` or run the job once manually before enabling the monitor.
-
-## Configure environment
-
-Create a local `.env` from the example:
+Create a local `.env` from the example and keep the NUC paths accurate:
 
 ```bash
 cp .env.example .env
 nano .env
 ```
 
-For the current NUC checkout, use:
+Typical NUC values:
 
-```bash
+```text
 HOME_SERVER_CONFIG=/home/lee/projects/home-server/config/sites.yaml
 HOME_SERVER_ENV_FILE=/home/lee/projects/home-server/.env
 HOME_SERVER_STATE_DIR=/var/lib/home-server
+
+HOME_SERVER_MONITOR_ON_BOOT_SEC=2min
+HOME_SERVER_MONITOR_INTERVAL=5min
+HOME_SERVER_GATEWAY_RETRY_COUNT=1
+HOME_SERVER_GATEWAY_RETRY_DELAY_SECONDS=5
+
+HOME_SERVER_JOBS_MONITOR_ON_BOOT_SEC=3min
+HOME_SERVER_JOBS_MONITOR_INTERVAL=5min
+
 HEALTH_TIMEOUT_MS=5000
 HOME_SERVER_SKIP_PUBLIC_HEALTH_CHECKS=false
 HOME_SERVER_SKIP_CRON_CHECKS=false
+HOME_SERVER_SKIP_CRON_DAEMON_CHECK=false
+HOME_SERVER_CRON_MAX_AGE_MINUTES=1500
+HOME_SERVER_CRON_LOG_TAIL_BYTES=65536
 ```
 
-Set Discord monitor webhooks:
+Set the Discord webhooks:
 
-```bash
+```text
 DISCORD_MONITOR_WARNING_WEBHOOK_URL=https://discord.com/api/webhooks/...
 DISCORD_MONITOR_CRITICAL_WEBHOOK_URL=https://discord.com/api/webhooks/...
-# Optional. Defaults to the critical webhook so firing/recovery pairs stay together.
 DISCORD_MONITOR_RECOVERY_WEBHOOK_URL=https://discord.com/api/webhooks/...
 ```
 
-If only the warning webhook is set, failure and recovery alerts both fall back to that webhook. If the critical webhook is set, failure and recovery alerts both use it unless `DISCORD_MONITOR_RECOVERY_WEBHOOK_URL` is explicitly set.
+Gateway failures prefer the critical webhook. Background-job failures prefer
+the warning webhook. Recovery uses `DISCORD_MONITOR_RECOVERY_WEBHOOK_URL` when
+set, otherwise the monitor's failure webhook.
 
-For first install, set `HOME_SERVER_SKIP_PUBLIC_HEALTH_CHECKS=true` only if public DNS/Tunnel routes are not ready yet. Flip it back to `false` once `curl https://grizzlybulls.com/api/health` succeeds from the NUC.
+## Install or update the monitors
 
-## Install the systemd timer
-
-From the repo root on the NUC:
+From the repository root on the NUC:
 
 ```bash
 sudo HOME_SERVER_ENV_FILE="$(pwd)/.env" bash scripts/install-monitor-service.sh
 ```
 
-Defaults:
+The installer renders, enables, and runs both monitors:
 
 ```text
-HOME_SERVER_MONITOR_ON_BOOT_SEC=2min
-HOME_SERVER_MONITOR_INTERVAL=5min
-HOME_SERVER_STATE_DIR=/var/lib/home-server
+home-server-gateway-monitor.service
+home-server-gateway-monitor.timer
+home-server-jobs-monitor.service
+home-server-jobs-monitor.timer
 ```
 
-Override them in `.env` or in the install command environment.
+Re-run the installer after changing these unit templates or monitor cadence.
 
-## Validate manually before relying on it
+## Validate manually
 
-Run the direct check first:
+Run the checks directly first:
 
 ```bash
 HOME_SERVER_ENV_FILE="$(pwd)/.env" bash scripts/monitor-gateway.sh
+HOME_SERVER_ENV_FILE="$(pwd)/.env" bash scripts/monitor-jobs.sh
 ```
 
-Then run through systemd:
+Then run them through systemd:
 
 ```bash
 sudo systemctl start home-server-gateway-monitor.service
-sudo journalctl -u home-server-gateway-monitor.service -o cat -n 100
+sudo systemctl start home-server-jobs-monitor.service
 ```
 
-## Inspect status
-
-```bash
-sudo systemctl status home-server-gateway-monitor.timer --no-pager
-sudo systemctl status home-server-gateway-monitor.service --no-pager
-```
-
-Recent logs:
+Inspect recent output:
 
 ```bash
 sudo journalctl -u home-server-gateway-monitor.service -o cat -n 200
+sudo journalctl -u home-server-jobs-monitor.service -o cat -n 200
+```
+
+Timer status:
+
+```bash
+sudo systemctl status home-server-gateway-monitor.timer --no-pager
+sudo systemctl status home-server-jobs-monitor.timer --no-pager
+```
+
+## Alert state
+
+The monitors use independent state files:
+
+```text
+/var/lib/home-server/gateway-monitor.state
+/var/lib/home-server/jobs-monitor.state
+```
+
+Each contains either `ok` or `firing`.
+
+Behavior for each monitor:
+
+- healthy check writes `ok`
+- failed check writes `firing`
+- first transition into `firing` sends one failure alert
+- repeated failures do not spam Discord
+- first transition from `firing` back to `ok` sends one recovery alert
+
+Delete one state file to reset only that monitor:
+
+```bash
+sudo rm -f /var/lib/home-server/gateway-monitor.state
+sudo rm -f /var/lib/home-server/jobs-monitor.state
 ```
 
 ## Disable monitoring
 
+Disable either timer independently:
+
 ```bash
 sudo systemctl disable --now home-server-gateway-monitor.timer
+sudo systemctl disable --now home-server-jobs-monitor.timer
 ```
 
-The unit files remain installed under `/etc/systemd/system/` so they can be re-enabled later.
-
-## Alert behavior
-
-The monitor writes one state file:
-
-```text
-/var/lib/home-server/gateway-monitor.state
-```
-
-Behavior:
-
-- healthy check writes `ok`
-- failed check writes `firing`
-- the first transition into `firing` sends a failure alert
-- repeated failures do not spam Discord
-- the first transition from `firing` back to `ok` sends a recovery alert
-
-Delete the state file to force the next failure to alert again:
-
-```bash
-sudo rm -f /var/lib/home-server/gateway-monitor.state
-```
-
-## Current NUC cutover checklist
-
-Your current state shows `money-bot-docker-monitor.timer` is already enabled, but `home-server-gateway-monitor.timer` is not installed yet. After merging this PR and pulling it on the NUC:
-
-```bash
-cd /home/lee/projects/home-server
-git pull
-pnpm install
-pnpm validate:sites
-sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/check-health.sh
-sudo HOME_SERVER_ENV_FILE="$(pwd)/.env" bash scripts/install-monitor-service.sh
-sudo systemctl status home-server-gateway-monitor.timer --no-pager
-```
-
-Keep `GRIZZLY_BULLS_HEALTH_URL=http://127.0.0.1:8080/api/health` in `money-bot/.env` for redundant alerting until the dedicated gateway monitor has been clean for several days.
+The installed unit files remain under `/etc/systemd/system/`.
