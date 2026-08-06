@@ -18,7 +18,7 @@ export function evaluateCronLogState({ lines, errorPatterns, successPatterns }) 
     if (!lastSuccess) {
       return {
         ok: false,
-        reason: 'missing-success',
+        reason: lastError ? 'error' : 'missing-success',
         lastError,
         lastSuccess: null,
       };
