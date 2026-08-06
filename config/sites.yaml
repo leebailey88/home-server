@@ -39,7 +39,9 @@ sites:
         expectedBodyContains: Grizzly Bulls
     cronJobs:
       - key: runtime-data-refresh
-        logPath: /var/log/grizzly-bulls-runtime-data.log
+        # The verbose cron log rotates daily. Monitor the durable terminal status
+        # file instead so log rotation cannot erase the latest completion marker.
+        logPath: /opt/grizzly-bulls/data/runtime-data-refresh.status
         maxAgeMinutes: 4500
         successPatterns:
           - Runtime data refresh complete
