@@ -40,6 +40,18 @@ test('configured success patterns must appear in the log tail', () => {
   assert.equal(state.reason, 'missing-success');
 });
 
+test('an error without any success marker surfaces the error', () => {
+  const state = evaluateCronLogState({
+    lines: ['Error: refresh failed'],
+    errorPatterns,
+    successPatterns,
+  });
+
+  assert.equal(state.ok, false);
+  assert.equal(state.reason, 'error');
+  assert.equal(state.lastError?.line, 'Error: refresh failed');
+});
+
 test('jobs without success patterns retain error-tail behavior', () => {
   const state = evaluateCronLogState({
     lines: ['refresh started', 'Error: refresh failed'],
