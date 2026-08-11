@@ -91,6 +91,15 @@ sites:
         maxAgeMinutes: 1500
     notes: Parcel Wing Next.js app, deployed by the parcelwing repo.
 
+  - key: altamont-previews
+    enabled: true
+    kind: static
+    hostnames:
+      - preview.altamontiq.com
+    root: /opt/altamont-previews/site
+    index: index.html
+    notes: Customer-shareable Altamont Advisory interactive wireframes and prototypes.
+
   - key: altamont-iq
     enabled: true
     kind: proxy
