@@ -38,6 +38,7 @@ async function checkUrl(label, rawCheck, init = {}) {
   const check = normalizeCheck(rawCheck);
   const expectedStatuses = expectedStatusesFor(check);
   const expectedBodyContains = expectedBodyValues(check);
+  const startedAt = Date.now();
 
   try {
     const response = await fetch(check.url, {
@@ -51,8 +52,9 @@ async function checkUrl(label, rawCheck, init = {}) {
     if (!statusOk) {
       failures += 1;
       const expected = expectedStatuses.length > 0 ? expectedStatuses.join(', ') : 'any 2xx status';
+      const elapsedMs = Date.now() - startedAt;
       console.error(
-        `[FAIL] ${label}: ${check.url} returned ${response.status}; expected ${expected}`,
+        `[FAIL] ${label}: ${check.url} returned ${response.status} in ${elapsedMs}ms; expected ${expected}`,
       );
       return;
     }
@@ -63,17 +65,24 @@ async function checkUrl(label, rawCheck, init = {}) {
 
       if (missing.length > 0) {
         failures += 1;
+        const elapsedMs = Date.now() - startedAt;
         console.error(
-          `[FAIL] ${label}: ${check.url} response body did not contain expected text: ${missing.join(', ')}`,
+          `[FAIL] ${label}: ${check.url} response body did not contain expected text after ${elapsedMs}ms: ${missing.join(', ')}`,
         );
         return;
       }
     }
 
-    console.log(`[OK] ${label}: ${check.url} returned ${response.status}`);
+    const elapsedMs = Date.now() - startedAt;
+    console.log(`[OK] ${label}: ${check.url} returned ${response.status} in ${elapsedMs}ms`);
   } catch (error) {
     failures += 1;
-    console.error(`[FAIL] ${label}: ${check.url} (${error.message})`);
+    const elapsedMs = Date.now() - startedAt;
+    const errorName = error instanceof Error ? error.name : 'Error';
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(
+      `[FAIL] ${label}: ${check.url} (${errorName}: ${errorMessage}; elapsed=${elapsedMs}ms timeout=${timeoutMs}ms)`,
+    );
   }
 }
 
