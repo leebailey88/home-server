@@ -5,9 +5,7 @@ export function parsePingOutput(output) {
   const rttMatch = output.match(
     /(?:rtt|round-trip) min\/avg\/max\/(?:mdev|stddev) = ([\d.]+)\/([\d.]+)\/([\d.]+)\/([\d.]+) ms/,
   );
-  const samplesMs = [...output.matchAll(/time[=<]([\d.]+)\s*ms/g)].map((match) =>
-    Number(match[1]),
-  );
+  const samplesMs = [...output.matchAll(/time[=<]([\d.]+)\s*ms/g)].map((match) => Number(match[1]));
 
   if (!packetMatch) {
     return null;
@@ -47,12 +45,8 @@ export function evaluateNetworkHealth(
 
   const reasons = [];
   const warnings = [];
-  const warnSampleCount = metrics.samplesMs.filter(
-    (value) => value >= warnHighLatencyMs,
-  ).length;
-  const failSampleCount = metrics.samplesMs.filter(
-    (value) => value >= failHighLatencyMs,
-  ).length;
+  const warnSampleCount = metrics.samplesMs.filter((value) => value >= warnHighLatencyMs).length;
+  const failSampleCount = metrics.samplesMs.filter((value) => value >= failHighLatencyMs).length;
 
   if (metrics.lossPercent >= failLossPercent) {
     reasons.push(`packet loss ${metrics.lossPercent}% >= ${failLossPercent}%`);
