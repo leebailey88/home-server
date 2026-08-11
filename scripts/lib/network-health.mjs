@@ -47,8 +47,12 @@ export function evaluateNetworkHealth(
 
   const reasons = [];
   const warnings = [];
-  const warnSampleCount = metrics.samplesMs.filter((value) => value >= warnHighLatencyMs).length;
-  const failSampleCount = metrics.samplesMs.filter((value) => value >= failHighLatencyMs).length;
+  const warnSampleCount = metrics.samplesMs.filter(
+    (value) => value >= warnHighLatencyMs,
+  ).length;
+  const failSampleCount = metrics.samplesMs.filter(
+    (value) => value >= failHighLatencyMs,
+  ).length;
 
   if (metrics.lossPercent >= failLossPercent) {
     reasons.push(`packet loss ${metrics.lossPercent}% >= ${failLossPercent}%`);
