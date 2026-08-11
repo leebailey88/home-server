@@ -12,7 +12,19 @@ NODE_MAJOR="${NODE_MAJOR:-24}"
 
 log "Installing base packages for NUC web gateway..."
 apt-get update
-apt-get install -y ca-certificates curl git gnupg jq nginx ufw fail2ban
+apt-get install -y \
+  ca-certificates \
+  curl \
+  ethtool \
+  fail2ban \
+  git \
+  gnupg \
+  iproute2 \
+  iputils-ping \
+  iw \
+  jq \
+  nginx \
+  ufw
 
 if ! command -v node > /dev/null 2>&1 || ! node --version | grep -q "^v${NODE_MAJOR}\."; then
   log "Installing Node.js ${NODE_MAJOR}.x..."

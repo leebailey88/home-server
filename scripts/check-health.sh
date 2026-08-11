@@ -15,6 +15,9 @@ else
   warn "cloudflared.service not found; skipping service status check"
 fi
 
+log "Checking host network path..."
+node "${SCRIPT_DIR}/check-network-health.mjs"
+
 log "Checking configured site upstreams and Nginx routes..."
 node "${SCRIPT_DIR}/check-sites-health.mjs"
 
