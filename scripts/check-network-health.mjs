@@ -163,7 +163,6 @@ const evaluation = evaluateNetworkHealth(metrics, {
 const wifi = wifiDiagnostics(route.interfaceName);
 const previous = previousCounters();
 const wifiText = wifiSummary(wifi, previous, route.interfaceName);
-saveCounters(route.interfaceName, wifi);
 
 const networkText = metrics
   ? [
@@ -182,6 +181,8 @@ if (evaluation.status === 'fail') {
   console.error(`[FAIL] host network path degraded: ${evaluation.reasons.join('; ')}; ${details}`);
   process.exit(1);
 }
+
+saveCounters(route.interfaceName, wifi);
 
 if (evaluation.status === 'warn') {
   console.warn(`[WARN] host network path elevated: ${evaluation.reasons.join('; ')}; ${details}`);
