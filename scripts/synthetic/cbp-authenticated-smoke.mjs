@@ -7,6 +7,7 @@ import { chromium } from 'playwright';
 
 import {
   DEFAULT_CBP_DASHBOARD_MARKER,
+  DEFAULT_CBP_READ_ONLY_PATHS,
   isTenantDashboardUrl,
   shouldBlockSyntheticPrefetch,
 } from '../lib/cbp-synthetic.mjs';
@@ -27,14 +28,9 @@ const screenshotDir =
   process.env.CBP_SYNTHETIC_SCREENSHOT_DIR || '/var/log/home-server-synthetic-monitor';
 const hostname = os.hostname();
 
-const defaultReadOnlyPaths = [
-  '/reports/balance-sheet',
-  '/reports/income-statement',
-  '/reports/packages',
-  '/reports/import',
-];
-
-const readOnlyPaths = (process.env.CBP_SYNTHETIC_READ_ONLY_PATHS || defaultReadOnlyPaths.join(','))
+const readOnlyPaths = (
+  process.env.CBP_SYNTHETIC_READ_ONLY_PATHS || DEFAULT_CBP_READ_ONLY_PATHS.join(',')
+)
   .split(',')
   .map((value) => value.trim())
   .filter(Boolean);
@@ -209,6 +205,7 @@ async function runSmoke() {
       shouldBlockSyntheticPrefetch({
         method: request.method(),
         headers: request.headers(),
+        url: request.url(),
       })
     ) {
       await route.abort('blockedbyclient');
