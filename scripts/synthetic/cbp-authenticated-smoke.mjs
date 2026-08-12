@@ -106,7 +106,13 @@ async function sendDiscord({ status, severity, title, details }) {
   const response = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content, allowed_mentions: { parse: [] } }),
+    body: JSON.stringify({
+      content,
+      allowed_mentions: { parse: [] },
+      // Discord message flag 1 << 2 (SUPPRESS_EMBEDS). Diagnostic URLs should
+      // remain readable without causing Discord's crawler to probe protected tenants.
+      flags: 4,
+    }),
   });
 
   if (!response.ok) {
