@@ -44,10 +44,7 @@ test('blocks speculative browser prefetches but not real navigations', () => {
     }),
     true,
   );
-  assert.equal(
-    shouldBlockSyntheticPrefetch({ method: 'GET', headers: {} }),
-    false,
-  );
+  assert.equal(shouldBlockSyntheticPrefetch({ method: 'GET', headers: {} }), false);
   assert.equal(
     shouldBlockSyntheticPrefetch({
       method: 'POST',
