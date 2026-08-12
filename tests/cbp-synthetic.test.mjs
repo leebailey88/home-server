@@ -3,12 +3,24 @@ import test from 'node:test';
 
 import {
   DEFAULT_CBP_DASHBOARD_MARKER,
+  DEFAULT_CBP_READ_ONLY_PATHS,
   isTenantDashboardUrl,
   shouldBlockSyntheticPrefetch,
 } from '../scripts/lib/cbp-synthetic.mjs';
 
 test('uses a stable current dashboard marker', () => {
   assert.equal(DEFAULT_CBP_DASHBOARD_MARKER, 'CEO dashboard');
+});
+
+test('uses current banker-facing report routes by default', () => {
+  assert.deepEqual(DEFAULT_CBP_READ_ONLY_PATHS, [
+    '/reports/balance-sheet',
+    '/reports/income-statement',
+    '/reports/liquidity',
+    '/reports/branch-performance',
+  ]);
+  assert.equal(DEFAULT_CBP_READ_ONLY_PATHS.includes('/reports/packages'), false);
+  assert.equal(DEFAULT_CBP_READ_ONLY_PATHS.includes('/reports/import'), false);
 });
 
 test('accepts only the tenant dashboard root as the completed post-login destination', () => {
@@ -44,10 +56,25 @@ test('blocks speculative browser prefetches but not real navigations', () => {
     }),
     true,
   );
-  assert.equal(shouldBlockSyntheticPrefetch({ method: 'GET', headers: {} }), false);
+  assert.equal(
+    shouldBlockSyntheticPrefetch({
+      method: 'GET',
+      url: 'https://test.communitybankpilot.com/reports/liquidity?_rsc=abc123',
+    }),
+    true,
+  );
+  assert.equal(
+    shouldBlockSyntheticPrefetch({
+      method: 'GET',
+      url: 'https://test.communitybankpilot.com/reports/liquidity',
+      headers: {},
+    }),
+    false,
+  );
   assert.equal(
     shouldBlockSyntheticPrefetch({
       method: 'POST',
+      url: 'https://test.communitybankpilot.com/login?_rsc=abc123',
       headers: { purpose: 'prefetch' },
     }),
     false,
