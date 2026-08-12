@@ -79,6 +79,22 @@ cloudflared/generated/config.yml
 sudo bash scripts/bootstrap-nuc.sh
 ```
 
+Bootstrap also installs and enables the Wi-Fi self-healing watchdog. It
+discovers the active default-route interface and NetworkManager profile at
+runtime, so the repo does not contain a machine-specific interface, SSID, or
+BSSID. If Ethernet is the default route, the watchdog remains inactive.
+
+Verify the recovery timer with:
+
+```bash
+sudo systemctl status home-server-wifi-recovery.timer --no-pager
+```
+
+Wi-Fi credentials are intentionally not managed by this repository. A
+replacement host must be given LAN access before cloning the repo, after which
+bootstrap installs the same recovery policy automatically. See
+`docs/runbooks/wifi-recovery.md` for trigger thresholds and troubleshooting.
+
 ## 7. Install Nginx config
 
 ```bash

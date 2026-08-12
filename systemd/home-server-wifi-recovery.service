@@ -1,0 +1,11 @@
+[Unit]
+Description=Home Server Wi-Fi self-healing watchdog
+Wants=network-online.target
+After=network-online.target NetworkManager.service
+
+[Service]
+Type=oneshot
+WorkingDirectory={{REPO_ROOT}}
+EnvironmentFile=-{{ENV_FILE}}
+Environment=HOME_SERVER_STATE_DIR={{STATE_DIR}}
+ExecStart=/usr/bin/env node {{REPO_ROOT}}/scripts/wifi-self-heal.mjs
