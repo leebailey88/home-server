@@ -73,12 +73,6 @@ test('only recent observations can count as consecutive evidence', () => {
 
 test('recovery cooldown reports remaining seconds', () => {
   const now = Date.parse('2026-08-12T14:00:00Z');
-  assert.equal(
-    recoveryCooldownRemainingSeconds('2026-08-12T13:45:00Z', now, 1800),
-    900,
-  );
-  assert.equal(
-    recoveryCooldownRemainingSeconds('2026-08-12T13:00:00Z', now, 1800),
-    0,
-  );
+  assert.equal(recoveryCooldownRemainingSeconds('2026-08-12T13:45:00Z', now, 1800), 900);
+  assert.equal(recoveryCooldownRemainingSeconds('2026-08-12T13:00:00Z', now, 1800), 0);
 });

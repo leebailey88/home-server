@@ -286,7 +286,9 @@ if (postWaitSeconds > 0) run('sleep', [String(postWaitSeconds)]);
 
 const recovered = currentSnapshot();
 if (!recovered.route || !recovered.wifi || !recovered.gateway) {
-  console.warn('[WARN] Wi-Fi profile was reactivated, but post-recovery diagnostics are unavailable');
+  console.warn(
+    '[WARN] Wi-Fi profile was reactivated, but post-recovery diagnostics are unavailable',
+  );
   process.exit(0);
 }
 
