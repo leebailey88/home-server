@@ -5,6 +5,12 @@ import path from 'node:path';
 import process from 'node:process';
 import { chromium } from 'playwright';
 
+import {
+  DEFAULT_CBP_DASHBOARD_MARKER,
+  isTenantDashboardUrl,
+  shouldBlockSyntheticPrefetch,
+} from '../lib/cbp-synthetic.mjs';
+
 const stateFile =
   process.env.CBP_SYNTHETIC_STATE_FILE ||
   '/var/lib/home-server-synthetic-monitor/cbp-authenticated-smoke-state.json';
@@ -14,7 +20,8 @@ const tenantSlug = process.env.CBP_SYNTHETIC_TENANT_SLUG || '';
 const email = process.env.CBP_SYNTHETIC_EMAIL || '';
 const password = process.env.CBP_SYNTHETIC_PASSWORD || '';
 const timeoutMs = Number.parseInt(process.env.CBP_SYNTHETIC_TIMEOUT_MS || '30000', 10);
-const dashboardText = process.env.CBP_SYNTHETIC_EXPECT_DASHBOARD_TEXT || 'Executive command center';
+const dashboardText =
+  process.env.CBP_SYNTHETIC_EXPECT_DASHBOARD_TEXT || DEFAULT_CBP_DASHBOARD_MARKER;
 const headless = process.env.CBP_SYNTHETIC_HEADLESS !== 'false';
 const screenshotDir =
   process.env.CBP_SYNTHETIC_SCREENSHOT_DIR || '/var/log/home-server-synthetic-monitor';
@@ -144,15 +151,11 @@ async function fillLoginForm(page) {
     .first();
 
   if (await submit.isVisible().catch(() => false)) {
-    await Promise.all([
-      page.waitForLoadState('networkidle', { timeout: timeoutMs }).catch(() => undefined),
-      submit.click(),
-    ]);
+    await submit.click();
     return;
   }
 
   await passwordInput.press('Enter');
-  await page.waitForLoadState('networkidle', { timeout: timeoutMs }).catch(() => undefined);
 }
 
 async function assertPageHealthy(page, label) {
@@ -200,6 +203,20 @@ async function runSmoke() {
   page.setDefaultTimeout(timeoutMs);
   page.setDefaultNavigationTimeout(timeoutMs);
 
+  await page.route('**/*', async (route) => {
+    const request = route.request();
+    if (
+      shouldBlockSyntheticPrefetch({
+        method: request.method(),
+        headers: request.headers(),
+      })
+    ) {
+      await route.abort('blockedbyclient');
+      return;
+    }
+    await route.continue();
+  });
+
   try {
     console.log(`[synthetic:cbp] Opening ${loginUrl}`);
     const loginResponse = await page.goto(loginUrl, {
@@ -212,9 +229,12 @@ async function runSmoke() {
     visited.push(`login:${loginResponse.status()}`);
 
     await fillLoginForm(page);
+    console.log('[synthetic:cbp] Waiting for authenticated dashboard');
+    await page.waitForURL((url) => isTenantDashboardUrl(url, origin), { timeout: timeoutMs });
     await page
-      .waitForURL((url) => !url.pathname.includes('/login'), { timeout: timeoutMs })
-      .catch(() => undefined);
+      .getByText(dashboardText, { exact: false })
+      .first()
+      .waitFor({ state: 'visible', timeout: timeoutMs });
 
     const dashboardBody = await assertPageHealthy(page, 'dashboard');
     if (!dashboardBody.includes(dashboardText)) {
@@ -238,6 +258,7 @@ async function runSmoke() {
       details: [
         `Origin: ${origin}`,
         `Tenant slug: ${tenantSlug || '(tenant URL override)'}`,
+        `Dashboard marker: ${dashboardText}`,
         `Read-only paths: ${readOnlyPaths.join(', ')}`,
         `Visited: ${visited.join(' | ')}`,
       ].join('\n'),
@@ -250,6 +271,7 @@ async function runSmoke() {
       details: [
         `Origin: ${origin}`,
         `Tenant slug: ${tenantSlug || '(tenant URL override)'}`,
+        `Current URL: ${page.url()}`,
         `Error: ${error.message}`,
         screenshotPath ? `Screenshot: ${screenshotPath}` : '',
         `Visited: ${visited.join(' | ') || '(none)'}`,

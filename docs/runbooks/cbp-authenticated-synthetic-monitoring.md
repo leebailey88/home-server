@@ -10,14 +10,19 @@ The default smoke flow:
 
 1. Opens the tenant login page.
 2. Signs in with a dedicated synthetic user.
-3. Confirms the dashboard contains `Executive command center`.
-4. Visits read-only report pages:
+3. Waits until the browser has completed `/auth/post-login` and reached the tenant dashboard root.
+4. Confirms the dashboard contains the stable `CEO dashboard` marker.
+5. Visits read-only report pages:
    - `/reports/balance-sheet`
    - `/reports/income-statement`
    - `/reports/packages`
    - `/reports/import`
 
 The monitor intentionally avoids mutating production data. Do not add request-demo submission, imports, data edits, or billing actions to the recurring monitor.
+
+The browser also blocks speculative Next.js link-prefetch requests. Real page navigations are still allowed. This keeps the synthetic check focused on the routes it explicitly verifies and prevents background prefetches (including export links) from creating unnecessary load or abandoned server work when a run finishes.
+
+The login flow deliberately does **not** wait for global browser `networkidle`. Modern Next.js pages may continuously prefetch or perform background requests, so `networkidle` is not a reliable signal that authentication completed. The monitor instead waits for the expected dashboard URL and visible dashboard marker.
 
 ## Install on the droplet
 
@@ -54,6 +59,7 @@ CBP_SYNTHETIC_BASE_URL=https://communitybankpilot.com
 CBP_SYNTHETIC_TENANT_SLUG=REPLACE_WITH_TENANT_SLUG
 CBP_SYNTHETIC_EMAIL=REPLACE_WITH_SYNTHETIC_USER_EMAIL
 CBP_SYNTHETIC_PASSWORD=REPLACE_WITH_SYNTHETIC_USER_PASSWORD
+CBP_SYNTHETIC_EXPECT_DASHBOARD_TEXT=CEO dashboard
 DISCORD_MONITOR_CRITICAL_WEBHOOK_URL=https://discord.com/api/webhooks/...
 DISCORD_MONITOR_RECOVERY_WEBHOOK_URL=https://discord.com/api/webhooks/...
 DISCORD_MONITOR_WARNING_WEBHOOK_URL=https://discord.com/api/webhooks/...
@@ -71,6 +77,8 @@ CBP_SYNTHETIC_TENANT_URL=https://tenant.communitybankpilot.com
 sudo systemctl start home-server-cbp-synthetic-monitor.service
 sudo journalctl -u home-server-cbp-synthetic-monitor.service -n 200 --no-pager
 ```
+
+A successful run should record `dashboard:ok` and each configured report path in the `Visited:` summary. If the previous state was firing, the first successful run also sends the recovery alert and clears the saved failure state.
 
 ## Timer
 
@@ -113,7 +121,7 @@ sudo systemctl start home-server-cbp-synthetic-monitor.service
 Confirm a Discord failure alert, then restore:
 
 ```bash
-sudo sed -i 's/^CBP_SYNTHETIC_EXPECT_DASHBOARD_TEXT=.*/CBP_SYNTHETIC_EXPECT_DASHBOARD_TEXT=Executive command center/' /etc/home-server-cbp-synthetic-monitor.env
+sudo sed -i 's/^CBP_SYNTHETIC_EXPECT_DASHBOARD_TEXT=.*/CBP_SYNTHETIC_EXPECT_DASHBOARD_TEXT=CEO dashboard/' /etc/home-server-cbp-synthetic-monitor.env
 sudo systemctl start home-server-cbp-synthetic-monitor.service
 ```
 
