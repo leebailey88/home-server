@@ -8,7 +8,10 @@ import { chromium } from 'playwright';
 import {
   DEFAULT_CBP_DASHBOARD_MARKER,
   DEFAULT_CBP_READ_ONLY_PATHS,
-  isTenantDashboardUrl,
+  MAX_CBP_DOCUMENT_OBSERVATIONS,
+  classifyAuthenticatedNavigationFailure,
+  formatSyntheticDocumentObservation,
+  isAuthenticatedNavigationTerminal,
   shouldBlockSyntheticPrefetch,
 } from '../lib/cbp-synthetic.mjs';
 
@@ -190,12 +193,51 @@ async function takeFailureScreenshot(page) {
   }
 }
 
+function conciseErrorMessage(error) {
+  const message = error instanceof Error ? error.message : String(error ?? 'Unknown synthetic failure.');
+  return message.split('\n')[0].trim().slice(0, 700) || 'Unknown synthetic failure.';
+}
+
+function makeSyntheticFailure(message, failureStage, failureClass) {
+  const error = new Error(message);
+  error.failureStage = failureStage;
+  error.failureClass = failureClass;
+  return error;
+}
+
+function classifyFailure(error, activeStage, currentUrl, origin) {
+  if (error?.failureStage && error?.failureClass) {
+    return {
+      failureStage: error.failureStage,
+      failureClass: error.failureClass,
+    };
+  }
+
+  if (activeStage === 'authenticated_navigation') {
+    return classifyAuthenticatedNavigationFailure(currentUrl, origin, baseUrl);
+  }
+
+  const fallbackByStage = {
+    login_page: 'login_page_failed',
+    login_submission: 'login_submission_failed',
+    dashboard_validation: 'dashboard_validation_failed',
+    report_navigation: 'report_check_failed',
+  };
+
+  return {
+    failureStage: activeStage || 'synthetic_runtime',
+    failureClass: fallbackByStage[activeStage] || 'synthetic_runtime_error',
+  };
+}
+
 async function runSmoke() {
   requireEnv('CBP_SYNTHETIC_EMAIL', email);
   requireEnv('CBP_SYNTHETIC_PASSWORD', password);
   const origin = resolveTenantOrigin();
   const loginUrl = `${origin}/login`;
   const visited = [];
+  const documentObservations = [];
+  let activeStage = 'login_page';
   const browser = await chromium.launch({ headless });
   const context = await browser.newContext({
     viewport: { width: 1365, height: 900 },
@@ -204,6 +246,16 @@ async function runSmoke() {
   const page = await context.newPage();
   page.setDefaultTimeout(timeoutMs);
   page.setDefaultNavigationTimeout(timeoutMs);
+
+  page.on('response', (response) => {
+    if (response.request().resourceType() !== 'document') return;
+    const observation = formatSyntheticDocumentObservation(response.url(), response.status());
+    if (!observation) return;
+    documentObservations.push(observation);
+    if (documentObservations.length > MAX_CBP_DOCUMENT_OBSERVATIONS) {
+      documentObservations.splice(0, documentObservations.length - MAX_CBP_DOCUMENT_OBSERVATIONS);
+    }
+  });
 
   await page.route('**/*', async (route) => {
     const request = route.request();
@@ -231,9 +283,25 @@ async function runSmoke() {
     }
     visited.push(`login:${loginResponse.status()}`);
 
+    activeStage = 'login_submission';
     await fillLoginForm(page);
+    activeStage = 'authenticated_navigation';
     console.log('[synthetic:cbp] Waiting for authenticated dashboard');
-    await page.waitForURL((url) => isTenantDashboardUrl(url, origin), { timeout: timeoutMs });
+    await page.waitForURL(
+      (url) => isAuthenticatedNavigationTerminal(url, origin, baseUrl),
+      { timeout: timeoutMs },
+    );
+
+    const authNavigation = classifyAuthenticatedNavigationFailure(page.url(), origin, baseUrl);
+    if (authNavigation.failureClass === 'workspace_setup_misroute') {
+      throw makeSyntheticFailure(
+        'Authenticated tenant user was incorrectly routed to workspace setup.',
+        authNavigation.failureStage,
+        authNavigation.failureClass,
+      );
+    }
+
+    activeStage = 'dashboard_validation';
     await page
       .getByText(dashboardText, { exact: false })
       .first()
@@ -246,6 +314,7 @@ async function runSmoke() {
     visited.push('dashboard:ok');
 
     for (const relativePath of readOnlyPaths) {
+      activeStage = 'report_navigation';
       const url = `${origin}${relativePath}`;
       console.log(`[synthetic:cbp] Opening ${url}`);
       const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
@@ -268,14 +337,23 @@ async function runSmoke() {
     };
   } catch (error) {
     const screenshotPath = await takeFailureScreenshot(page);
+    const failure = classifyFailure(error, activeStage, page.url(), origin);
+    const errorMessage = conciseErrorMessage(error);
     return {
       ok: false,
-      error,
+      error: new Error(errorMessage),
+      failureStage: failure.failureStage,
+      failureClass: failure.failureClass,
       details: [
         `Origin: ${origin}`,
         `Tenant slug: ${tenantSlug || '(tenant URL override)'}`,
+        `Failure stage: ${failure.failureStage}`,
+        `Failure class: ${failure.failureClass}`,
         `Current URL: ${page.url()}`,
-        `Error: ${error.message}`,
+        `Error: ${errorMessage}`,
+        documentObservations.length > 0
+          ? `Documents: ${documentObservations.join(' | ')}`
+          : 'Documents: (none)',
         screenshotPath ? `Screenshot: ${screenshotPath}` : '',
         `Visited: ${visited.join(' | ') || '(none)'}`,
       ]
@@ -296,7 +374,11 @@ const durationMs = Date.now() - startedAt;
 if (!result.ok) {
   const details = `${result.details}\nDuration: ${durationMs}ms`;
   console.error(details);
-  if (previous.status !== 'firing' || previous.lastError !== result.error.message) {
+  if (
+    previous.status !== 'firing' ||
+    previous.lastError !== result.error.message ||
+    previous.lastFailureClass !== result.failureClass
+  ) {
     await sendDiscord({
       status: 'firing',
       severity: 'critical',
@@ -307,6 +389,8 @@ if (!result.ok) {
   saveState({
     status: 'firing',
     lastError: result.error.message,
+    lastFailureStage: result.failureStage,
+    lastFailureClass: result.failureClass,
     lastCheckedAt: new Date().toISOString(),
     durationMs,
   });
@@ -323,4 +407,11 @@ if (previous.status === 'firing') {
     details,
   });
 }
-saveState({ status: 'ok', lastError: '', lastCheckedAt: new Date().toISOString(), durationMs });
+saveState({
+  status: 'ok',
+  lastError: '',
+  lastFailureStage: '',
+  lastFailureClass: '',
+  lastCheckedAt: new Date().toISOString(),
+  durationMs,
+});
