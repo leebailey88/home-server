@@ -70,17 +70,23 @@ export function isAuthenticatedNavigationTerminal(value, expectedOrigin, baseUrl
   );
 }
 
-export function formatSyntheticDocumentObservation(value, status) {
+export function formatSyntheticLocation(value) {
   try {
     const url = value instanceof URL ? value : new URL(value);
-    const parsedStatus = Number(status);
-    const safeStatus = Number.isInteger(parsedStatus) && parsedStatus >= 100 && parsedStatus <= 599
-      ? parsedStatus
-      : 'unknown';
-    return `${url.origin}${url.pathname}:${safeStatus}`;
+    return `${url.origin}${url.pathname}`;
   } catch {
-    return '';
+    return '(invalid URL)';
   }
+}
+
+export function formatSyntheticDocumentObservation(value, status) {
+  const location = formatSyntheticLocation(value);
+  if (location === '(invalid URL)') return '';
+  const parsedStatus = Number(status);
+  const safeStatus = Number.isInteger(parsedStatus) && parsedStatus >= 100 && parsedStatus <= 599
+    ? parsedStatus
+    : 'unknown';
+  return `${location}:${safeStatus}`;
 }
 
 export function shouldBlockSyntheticPrefetch({ method = 'GET', headers = {}, url = '' } = {}) {
