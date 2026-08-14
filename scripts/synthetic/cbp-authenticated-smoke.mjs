@@ -11,6 +11,7 @@ import {
   MAX_CBP_DOCUMENT_OBSERVATIONS,
   classifyAuthenticatedNavigationFailure,
   formatSyntheticDocumentObservation,
+  formatSyntheticLocation,
   isAuthenticatedNavigationTerminal,
   shouldBlockSyntheticPrefetch,
 } from '../lib/cbp-synthetic.mjs';
@@ -339,6 +340,7 @@ async function runSmoke() {
     const screenshotPath = await takeFailureScreenshot(page);
     const failure = classifyFailure(error, activeStage, page.url(), origin);
     const errorMessage = conciseErrorMessage(error);
+    const currentLocation = formatSyntheticLocation(page.url());
     return {
       ok: false,
       error: new Error(errorMessage),
@@ -349,7 +351,7 @@ async function runSmoke() {
         `Tenant slug: ${tenantSlug || '(tenant URL override)'}`,
         `Failure stage: ${failure.failureStage}`,
         `Failure class: ${failure.failureClass}`,
-        `Current URL: ${page.url()}`,
+        `Current URL: ${currentLocation}`,
         `Error: ${errorMessage}`,
         documentObservations.length > 0
           ? `Documents: ${documentObservations.join(' | ')}`
