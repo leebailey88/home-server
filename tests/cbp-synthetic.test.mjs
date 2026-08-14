@@ -7,6 +7,7 @@ import {
   MAX_CBP_DOCUMENT_OBSERVATIONS,
   classifyAuthenticatedNavigationFailure,
   formatSyntheticDocumentObservation,
+  formatSyntheticLocation,
   isAuthenticatedNavigationTerminal,
   isTenantDashboardUrl,
   shouldBlockSyntheticPrefetch,
@@ -78,19 +79,22 @@ test('classifies a tenant post-login timeout separately from a generic dashboard
   );
 });
 
-test('document observations are bounded metadata and strip query strings and fragments', () => {
+test('document and current-location evidence strips query strings and fragments', () => {
   assert.equal(MAX_CBP_DOCUMENT_OBSERVATIONS, 12);
-  const observation = formatSyntheticDocumentObservation(
-    'https://test.communitybankpilot.com/auth/post-login?returnTo=%2Freports%2Fliquidity#token-like-fragment',
-    503,
-  );
+  const url =
+    'https://test.communitybankpilot.com/auth/post-login?returnTo=%2Freports%2Fliquidity#token-like-fragment';
+  const observation = formatSyntheticDocumentObservation(url, 503);
+  const location = formatSyntheticLocation(url);
 
   assert.equal(
     observation,
     'https://test.communitybankpilot.com/auth/post-login:503',
   );
+  assert.equal(location, 'https://test.communitybankpilot.com/auth/post-login');
   assert.equal(observation.includes('returnTo'), false);
   assert.equal(observation.includes('token-like-fragment'), false);
+  assert.equal(location.includes('returnTo'), false);
+  assert.equal(location.includes('token-like-fragment'), false);
 });
 
 test('blocks speculative browser prefetches but not real navigations', () => {
