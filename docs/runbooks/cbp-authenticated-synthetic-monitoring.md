@@ -26,6 +26,22 @@ The browser blocks speculative Next.js link-prefetch requests, including `_rsc` 
 
 The login flow deliberately does **not** wait for global browser `networkidle`. Modern Next.js pages may continuously prefetch or perform background requests, so `networkidle` is not a reliable signal that authentication completed. The monitor instead waits for the expected dashboard URL and visible dashboard marker.
 
+## Authenticated failure semantics
+
+The synthetic monitor treats the tenant dashboard root as the only successful post-login destination. Failure output includes a stable `Failure stage` and `Failure class` so incidents can be correlated with application-side health evidence without parsing Playwright prose.
+
+Important classes include:
+
+- `workspace_setup_misroute` — an already configured tenant synthetic user reached the apex `/auth/setup-workspace` route. This is terminal and fails immediately rather than consuming the full navigation timeout.
+- `post_login_stalled` — the browser remained on the tenant `/auth/post-login` route until the navigation timeout.
+- `login_not_completed` — authenticated navigation returned to the tenant login route.
+- `dashboard_navigation_timeout` — navigation stayed on the tenant origin but never reached the dashboard root.
+- `report_check_failed` — authentication completed, but a configured banker-facing report navigation or validation failed.
+
+Do not suppress these failures because a hosting/provider incident is known. The monitor represents customer-visible usability. Provider status may enrich incident diagnosis, but it must not turn a real authenticated failure into a passing check.
+
+Failed runs also retain a bounded document-navigation trail. Each observation contains only `origin + pathname + HTTP status`; query strings, fragments, headers, request/response bodies, cookies, and credentials are never recorded. Playwright error output is reduced to its first concise line for the same reason. Keep this metadata-only boundary when extending diagnostics.
+
 ## Install on the droplet
 
 From the `home-server` repo on the droplet:
@@ -83,6 +99,8 @@ sudo journalctl -u home-server-cbp-synthetic-monitor.service -n 200 --no-pager
 
 A successful run should record `dashboard:ok` and each configured report path in the `Visited:` summary. If the previous state was firing, the first successful run also sends the recovery alert and clears the saved failure state.
 
+A failed run should include `Failure stage`, `Failure class`, `Current URL`, the bounded `Documents` trail, screenshot path when available, and the explicit routes already visited. The saved state also keeps the last failure stage/class; a changed failure class can produce a new alert even if the concise error line is unchanged.
+
 ## Timer
 
 ```bash
@@ -104,7 +122,7 @@ The monitor keeps state in:
 /var/lib/home-server-synthetic-monitor/cbp-authenticated-smoke-state.json
 ```
 
-It sends Discord alerts on first failure, changed failure message, and recovery.
+It sends Discord alerts on first failure, changed failure message/class, and recovery.
 
 Screenshots from failed browser runs are written to:
 
