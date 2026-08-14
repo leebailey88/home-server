@@ -1,4 +1,5 @@
 export const DEFAULT_CBP_DASHBOARD_MARKER = 'CEO dashboard';
+export const MAX_CBP_DOCUMENT_OBSERVATIONS = 12;
 
 export const DEFAULT_CBP_READ_ONLY_PATHS = Object.freeze([
   '/reports/balance-sheet',
@@ -13,6 +14,72 @@ export function isTenantDashboardUrl(value, expectedOrigin) {
     return url.origin === expectedOrigin && url.pathname === '/';
   } catch {
     return false;
+  }
+}
+
+export function classifyAuthenticatedNavigationFailure(value, expectedOrigin, baseUrl) {
+  try {
+    const url = value instanceof URL ? value : new URL(value);
+    const baseOrigin = new URL(baseUrl).origin;
+
+    if (url.origin === baseOrigin && url.pathname === '/auth/setup-workspace') {
+      return {
+        failureStage: 'workspace_resolution',
+        failureClass: 'workspace_setup_misroute',
+      };
+    }
+
+    if (url.origin === expectedOrigin && url.pathname === '/auth/post-login') {
+      return {
+        failureStage: 'post_login',
+        failureClass: 'post_login_stalled',
+      };
+    }
+
+    if (url.origin === expectedOrigin && url.pathname === '/login') {
+      return {
+        failureStage: 'authentication',
+        failureClass: 'login_not_completed',
+      };
+    }
+
+    if (url.origin !== expectedOrigin) {
+      return {
+        failureStage: 'authenticated_navigation',
+        failureClass: 'unexpected_origin',
+      };
+    }
+  } catch {
+    return {
+      failureStage: 'authenticated_navigation',
+      failureClass: 'invalid_navigation_url',
+    };
+  }
+
+  return {
+    failureStage: 'authenticated_navigation',
+    failureClass: 'dashboard_navigation_timeout',
+  };
+}
+
+export function isAuthenticatedNavigationTerminal(value, expectedOrigin, baseUrl) {
+  if (isTenantDashboardUrl(value, expectedOrigin)) return true;
+  return (
+    classifyAuthenticatedNavigationFailure(value, expectedOrigin, baseUrl).failureClass ===
+    'workspace_setup_misroute'
+  );
+}
+
+export function formatSyntheticDocumentObservation(value, status) {
+  try {
+    const url = value instanceof URL ? value : new URL(value);
+    const parsedStatus = Number(status);
+    const safeStatus = Number.isInteger(parsedStatus) && parsedStatus >= 100 && parsedStatus <= 599
+      ? parsedStatus
+      : 'unknown';
+    return `${url.origin}${url.pathname}:${safeStatus}`;
+  } catch {
+    return '';
   }
 }
 
