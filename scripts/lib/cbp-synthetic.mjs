@@ -83,9 +83,10 @@ export function formatSyntheticDocumentObservation(value, status) {
   const location = formatSyntheticLocation(value);
   if (location === '(invalid URL)') return '';
   const parsedStatus = Number(status);
-  const safeStatus = Number.isInteger(parsedStatus) && parsedStatus >= 100 && parsedStatus <= 599
-    ? parsedStatus
-    : 'unknown';
+  const safeStatus =
+    Number.isInteger(parsedStatus) && parsedStatus >= 100 && parsedStatus <= 599
+      ? parsedStatus
+      : 'unknown';
   return `${location}:${safeStatus}`;
 }
 

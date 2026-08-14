@@ -42,7 +42,8 @@ test('accepts only the tenant dashboard root as the completed post-login destina
 test('fails authenticated navigation immediately when an existing tenant user reaches workspace setup', () => {
   const origin = 'https://test.communitybankpilot.com';
   const baseUrl = 'https://communitybankpilot.com';
-  const setupUrl = 'https://communitybankpilot.com/auth/setup-workspace?returnTo=%2Freports%2Fliquidity';
+  const setupUrl =
+    'https://communitybankpilot.com/auth/setup-workspace?returnTo=%2Freports%2Fliquidity';
 
   assert.equal(isAuthenticatedNavigationTerminal(`${origin}/`, origin, baseUrl), true);
   assert.equal(isAuthenticatedNavigationTerminal(setupUrl, origin, baseUrl), true);
@@ -50,13 +51,10 @@ test('fails authenticated navigation immediately when an existing tenant user re
     isAuthenticatedNavigationTerminal(`${origin}/auth/post-login`, origin, baseUrl),
     false,
   );
-  assert.deepEqual(
-    classifyAuthenticatedNavigationFailure(setupUrl, origin, baseUrl),
-    {
-      failureStage: 'workspace_resolution',
-      failureClass: 'workspace_setup_misroute',
-    },
-  );
+  assert.deepEqual(classifyAuthenticatedNavigationFailure(setupUrl, origin, baseUrl), {
+    failureStage: 'workspace_resolution',
+    failureClass: 'workspace_setup_misroute',
+  });
 });
 
 test('classifies a tenant post-login timeout separately from a generic dashboard timeout', () => {
@@ -86,10 +84,7 @@ test('document and current-location evidence strips query strings and fragments'
   const observation = formatSyntheticDocumentObservation(url, 503);
   const location = formatSyntheticLocation(url);
 
-  assert.equal(
-    observation,
-    'https://test.communitybankpilot.com/auth/post-login:503',
-  );
+  assert.equal(observation, 'https://test.communitybankpilot.com/auth/post-login:503');
   assert.equal(location, 'https://test.communitybankpilot.com/auth/post-login');
   assert.equal(observation.includes('returnTo'), false);
   assert.equal(observation.includes('token-like-fragment'), false);

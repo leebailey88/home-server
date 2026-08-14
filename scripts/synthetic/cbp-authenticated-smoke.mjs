@@ -195,7 +195,8 @@ async function takeFailureScreenshot(page) {
 }
 
 function conciseErrorMessage(error) {
-  const message = error instanceof Error ? error.message : String(error ?? 'Unknown synthetic failure.');
+  const message =
+    error instanceof Error ? error.message : String(error ?? 'Unknown synthetic failure.');
   return message.split('\n')[0].trim().slice(0, 700) || 'Unknown synthetic failure.';
 }
 
@@ -288,10 +289,9 @@ async function runSmoke() {
     await fillLoginForm(page);
     activeStage = 'authenticated_navigation';
     console.log('[synthetic:cbp] Waiting for authenticated dashboard');
-    await page.waitForURL(
-      (url) => isAuthenticatedNavigationTerminal(url, origin, baseUrl),
-      { timeout: timeoutMs },
-    );
+    await page.waitForURL((url) => isAuthenticatedNavigationTerminal(url, origin, baseUrl), {
+      timeout: timeoutMs,
+    });
 
     const authNavigation = classifyAuthenticatedNavigationFailure(page.url(), origin, baseUrl);
     if (authNavigation.failureClass === 'workspace_setup_misroute') {
