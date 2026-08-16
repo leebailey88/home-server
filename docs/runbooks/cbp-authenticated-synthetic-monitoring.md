@@ -24,7 +24,11 @@ Do not add `/reports/packages` or `/reports/import` to the default route list. `
 
 The browser blocks speculative Next.js link-prefetch requests, including `_rsc` GETs. Real page navigations are still allowed. This keeps the synthetic check focused on the routes it explicitly verifies and prevents background prefetches (including export links) from creating unnecessary load or abandoned server work when a run finishes.
 
+The synthetic browser context also blocks service workers. Community Bank Pilot's production browser-resume service worker is a user-facing presentation-resilience layer for reconnecting discarded tabs; it must not interpose on this independent external probe. The synthetic monitor therefore certifies the underlying public network, authentication, application, and report-serving path directly rather than allowing a browser fallback layer to alter top-level navigation semantics.
+
 The login flow deliberately does **not** wait for global browser `networkidle`. Modern Next.js pages may continuously prefetch or perform background requests, so `networkidle` is not a reliable signal that authentication completed. The monitor instead waits for the expected dashboard URL and visible dashboard marker.
+
+A Playwright URL-wait exception is also not independently authoritative after Chromium has already committed the exact tenant dashboard root. Browser navigation bookkeeping can report a superseded navigation as `ERR_ABORTED` even though the intended document has committed. In that one case the monitor continues to the existing semantic dashboard-marker and page-health checks. It does **not** recover URL-wait failures while still on `/auth/post-login`, `/login`, another origin, or any other tenant path. The dashboard marker remains mandatory, so this hardening does not turn an incomplete or broken dashboard into a passing check.
 
 ## Authenticated failure semantics
 
@@ -37,6 +41,8 @@ Important classes include:
 - `login_not_completed` — authenticated navigation returned to the tenant login route.
 - `dashboard_navigation_timeout` — navigation stayed on the tenant origin but never reached the dashboard root.
 - `report_check_failed` — authentication completed, but a configured banker-facing report navigation or validation failed.
+
+If an interrupted URL wait is recovered only because the browser has already committed the exact tenant dashboard root, the `Visited:` evidence includes `dashboard:navigation-wait-recovered` before the mandatory `dashboard:ok` marker. This preserves the navigation anomaly as safe diagnostic evidence without paging on it by itself.
 
 Do not suppress these failures because a hosting/provider incident is known. The monitor represents customer-visible usability. Provider status may enrich incident diagnosis, but it must not turn a real authenticated failure into a passing check.
 
@@ -98,6 +104,8 @@ sudo journalctl -u home-server-cbp-synthetic-monitor.service -n 200 --no-pager
 ```
 
 A successful run should record `dashboard:ok` and each configured report path in the `Visited:` summary. If the previous state was firing, the first successful run also sends the recovery alert and clears the saved failure state.
+
+A successful run that recovered only an interrupted Playwright URL wait after the exact dashboard URL had already committed records `dashboard:navigation-wait-recovered | dashboard:ok`. The semantic dashboard and all configured report checks still must pass.
 
 A failed run should include `Failure stage`, `Failure class`, `Current URL`, the bounded `Documents` trail, screenshot path when available, and the explicit routes already visited. The saved state also keeps the last failure stage/class; a changed failure class can produce a new alert even if the concise error line is unchanged.
 
