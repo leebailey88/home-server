@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import test from 'node:test';
 
 import {
@@ -12,6 +13,11 @@ import {
   isTenantDashboardUrl,
   shouldBlockSyntheticPrefetch,
 } from '../scripts/lib/cbp-synthetic.mjs';
+
+const syntheticScript = fs.readFileSync(
+  new URL('../scripts/synthetic/cbp-authenticated-smoke.mjs', import.meta.url),
+  'utf8',
+);
 
 test('uses a stable current dashboard marker', () => {
   assert.equal(DEFAULT_CBP_DASHBOARD_MARKER, 'CEO dashboard');
@@ -74,6 +80,25 @@ test('classifies a tenant post-login timeout separately from a generic dashboard
       failureStage: 'authenticated_navigation',
       failureClass: 'dashboard_navigation_timeout',
     },
+  );
+});
+
+test('independent authenticated smoke blocks browser-resume service workers', () => {
+  assert.match(syntheticScript, /serviceWorkers:\s*'block'/);
+});
+
+test('an interrupted URL wait can continue only after the exact tenant dashboard URL committed', () => {
+  const recoveryGuard =
+    /catch \(error\) \{[\s\S]*?if \(!isTenantDashboardUrl\(page\.url\(\), origin\)\) throw error;[\s\S]*?dashboard:navigation-wait-recovered/;
+  assert.match(syntheticScript, recoveryGuard);
+
+  const recoveryIndex = syntheticScript.indexOf('dashboard:navigation-wait-recovered');
+  const dashboardValidationIndex = syntheticScript.indexOf("activeStage = 'dashboard_validation'");
+  assert.ok(recoveryIndex >= 0);
+  assert.ok(dashboardValidationIndex > recoveryIndex);
+  assert.match(
+    syntheticScript.slice(dashboardValidationIndex),
+    /getByText\(dashboardText, \{ exact: false \}\)/,
   );
 });
 

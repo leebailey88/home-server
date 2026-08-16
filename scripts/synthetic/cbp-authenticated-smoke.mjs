@@ -13,6 +13,7 @@ import {
   formatSyntheticDocumentObservation,
   formatSyntheticLocation,
   isAuthenticatedNavigationTerminal,
+  isTenantDashboardUrl,
   shouldBlockSyntheticPrefetch,
 } from '../lib/cbp-synthetic.mjs';
 
@@ -244,6 +245,10 @@ async function runSmoke() {
   const context = await browser.newContext({
     viewport: { width: 1365, height: 900 },
     userAgent: 'home-server-cbp-authenticated-synthetic-monitor/1.0',
+    // The production browser-resume worker is a presentation resilience layer.
+    // This independent monitor must certify the underlying network/auth/app path
+    // without a service worker changing top-level navigation semantics.
+    serviceWorkers: 'block',
   });
   const page = await context.newPage();
   page.setDefaultTimeout(timeoutMs);
@@ -289,9 +294,22 @@ async function runSmoke() {
     await fillLoginForm(page);
     activeStage = 'authenticated_navigation';
     console.log('[synthetic:cbp] Waiting for authenticated dashboard');
-    await page.waitForURL((url) => isAuthenticatedNavigationTerminal(url, origin, baseUrl), {
-      timeout: timeoutMs,
-    });
+    try {
+      await page.waitForURL((url) => isAuthenticatedNavigationTerminal(url, origin, baseUrl), {
+        timeout: timeoutMs,
+      });
+    } catch (error) {
+      // Chromium/Playwright can report a superseded top-level navigation as
+      // ERR_ABORTED even after the browser has committed the intended dashboard
+      // URL. URL-wait bookkeeping is not stronger evidence than the rendered
+      // application. Continue only at the exact tenant dashboard root; the
+      // semantic dashboard marker and page-health checks below remain mandatory.
+      if (!isTenantDashboardUrl(page.url(), origin)) throw error;
+      visited.push('dashboard:navigation-wait-recovered');
+      console.warn(
+        `[synthetic:cbp] Authenticated navigation wait interrupted after dashboard URL committed: ${conciseErrorMessage(error)}`,
+      );
+    }
 
     const authNavigation = classifyAuthenticatedNavigationFailure(page.url(), origin, baseUrl);
     if (authNavigation.failureClass === 'workspace_setup_misroute') {
