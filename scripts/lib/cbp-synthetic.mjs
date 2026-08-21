@@ -1,5 +1,6 @@
 export const DEFAULT_CBP_DASHBOARD_MARKER = 'CEO dashboard';
 export const MAX_CBP_DOCUMENT_OBSERVATIONS = 12;
+export const CBP_AUTH_FAILURE_SELECTOR = '[data-auth-failure-class]';
 
 export const DEFAULT_CBP_READ_ONLY_PATHS = Object.freeze([
   '/reports/balance-sheet',
@@ -68,6 +69,35 @@ export function isAuthenticatedNavigationTerminal(value, expectedOrigin, baseUrl
     classifyAuthenticatedNavigationFailure(value, expectedOrigin, baseUrl).failureClass ===
     'workspace_setup_misroute'
   );
+}
+
+export function normalizeSyntheticAuthFailureEvidence({
+  failureClass,
+  authStatus,
+  verificationAttempts,
+} = {}) {
+  const rawFailureClass = String(failureClass ?? '').trim();
+  const safeFailureClass = /^[a-z0-9_]{1,80}$/.test(rawFailureClass)
+    ? rawFailureClass
+    : 'login_not_completed';
+
+  const parsedStatus = Number(authStatus);
+  const safeAuthStatus =
+    Number.isInteger(parsedStatus) && parsedStatus >= 100 && parsedStatus <= 599
+      ? parsedStatus
+      : null;
+
+  const parsedAttempts = Number(verificationAttempts);
+  const safeVerificationAttempts =
+    Number.isInteger(parsedAttempts) && parsedAttempts >= 1 && parsedAttempts <= 5
+      ? parsedAttempts
+      : null;
+
+  return {
+    failureClass: safeFailureClass,
+    authStatus: safeAuthStatus,
+    verificationAttempts: safeVerificationAttempts,
+  };
 }
 
 export function formatSyntheticLocation(value) {
