@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import test from 'node:test';
 
 import {
+  CBP_AUTH_FAILURE_SELECTOR,
   DEFAULT_CBP_DASHBOARD_MARKER,
   DEFAULT_CBP_READ_ONLY_PATHS,
   MAX_CBP_DOCUMENT_OBSERVATIONS,
@@ -11,6 +12,7 @@ import {
   formatSyntheticLocation,
   isAuthenticatedNavigationTerminal,
   isTenantDashboardUrl,
+  normalizeSyntheticAuthFailureEvidence,
   shouldBlockSyntheticPrefetch,
 } from '../scripts/lib/cbp-synthetic.mjs';
 
@@ -81,6 +83,42 @@ test('classifies a tenant post-login timeout separately from a generic dashboard
       failureClass: 'dashboard_navigation_timeout',
     },
   );
+});
+
+test('normalizes only safe application auth failure evidence', () => {
+  assert.equal(CBP_AUTH_FAILURE_SELECTOR, '[data-auth-failure-class]');
+  assert.deepEqual(
+    normalizeSyntheticAuthFailureEvidence({
+      failureClass: 'auth_user_verification_failed',
+      authStatus: '401',
+      verificationAttempts: '2',
+    }),
+    {
+      failureClass: 'auth_user_verification_failed',
+      authStatus: 401,
+      verificationAttempts: 2,
+    },
+  );
+  assert.deepEqual(
+    normalizeSyntheticAuthFailureEvidence({
+      failureClass: 'unsafe class; token=secret',
+      authStatus: '999',
+      verificationAttempts: '99',
+    }),
+    {
+      failureClass: 'login_not_completed',
+      authStatus: null,
+      verificationAttempts: null,
+    },
+  );
+});
+
+test('synthetic races dashboard navigation against classified in-page auth failure evidence', () => {
+  assert.match(syntheticScript, /Promise\.race\(\[navigationPromise, authFailurePromise\]\)/);
+  assert.match(syntheticScript, /data-auth-failure-class/);
+  assert.match(syntheticScript, /Auth response status: HTTP/);
+  assert.match(syntheticScript, /Verification attempts:/);
+  assert.match(syntheticScript, /lastAuthStatus/);
 });
 
 test('independent authenticated smoke blocks browser-resume service workers', () => {

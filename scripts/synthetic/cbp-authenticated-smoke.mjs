@@ -6,6 +6,7 @@ import process from 'node:process';
 import { chromium } from 'playwright';
 
 import {
+  CBP_AUTH_FAILURE_SELECTOR,
   DEFAULT_CBP_DASHBOARD_MARKER,
   DEFAULT_CBP_READ_ONLY_PATHS,
   MAX_CBP_DOCUMENT_OBSERVATIONS,
@@ -14,6 +15,7 @@ import {
   formatSyntheticLocation,
   isAuthenticatedNavigationTerminal,
   isTenantDashboardUrl,
+  normalizeSyntheticAuthFailureEvidence,
   shouldBlockSyntheticPrefetch,
 } from '../lib/cbp-synthetic.mjs';
 
@@ -165,6 +167,60 @@ async function fillLoginForm(page) {
   await passwordInput.press('Enter');
 }
 
+async function readAuthFailureEvidence(page) {
+  const marker = page.locator(CBP_AUTH_FAILURE_SELECTOR).first();
+  const [failureClass, authStatus, verificationAttempts] = await Promise.all([
+    marker.getAttribute('data-auth-failure-class'),
+    marker.getAttribute('data-auth-dependency-status'),
+    marker.getAttribute('data-auth-verification-attempts'),
+  ]);
+
+  return normalizeSyntheticAuthFailureEvidence({
+    failureClass,
+    authStatus,
+    verificationAttempts,
+  });
+}
+
+async function waitForAuthenticatedOutcome(page, origin) {
+  const navigationPromise = page
+    .waitForURL((url) => isAuthenticatedNavigationTerminal(url, origin, baseUrl), {
+      timeout: timeoutMs,
+    })
+    .then(() => ({ kind: 'navigation' }))
+    .catch((error) => ({ kind: 'navigation_error', error }));
+
+  const authFailurePromise = page
+    .locator(CBP_AUTH_FAILURE_SELECTOR)
+    .first()
+    .waitFor({ state: 'attached', timeout: 0 })
+    .then(async () => ({
+      kind: 'auth_failure',
+      evidence: await readAuthFailureEvidence(page),
+    }))
+    .catch(() => ({ kind: 'marker_closed' }));
+
+  const outcome = await Promise.race([navigationPromise, authFailurePromise]);
+
+  if (outcome.kind === 'auth_failure') {
+    throw makeSyntheticFailure(
+      `Application reported authentication failure: ${outcome.evidence.failureClass}.`,
+      'authentication',
+      outcome.evidence.failureClass,
+      {
+        authStatus: outcome.evidence.authStatus,
+        verificationAttempts: outcome.evidence.verificationAttempts,
+      },
+    );
+  }
+
+  if (outcome.kind === 'navigation_error') throw outcome.error;
+  if (outcome.kind === 'marker_closed') {
+    const navigationOutcome = await navigationPromise;
+    if (navigationOutcome.kind === 'navigation_error') throw navigationOutcome.error;
+  }
+}
+
 async function assertPageHealthy(page, label) {
   await page.waitForLoadState('domcontentloaded', { timeout: timeoutMs });
   const bodyText = (await page.locator('body').innerText({ timeout: timeoutMs })).trim();
@@ -201,10 +257,13 @@ function conciseErrorMessage(error) {
   return message.split('\n')[0].trim().slice(0, 700) || 'Unknown synthetic failure.';
 }
 
-function makeSyntheticFailure(message, failureStage, failureClass) {
+function makeSyntheticFailure(message, failureStage, failureClass, metadata = {}) {
   const error = new Error(message);
   error.failureStage = failureStage;
   error.failureClass = failureClass;
+  if (Number.isInteger(metadata.authStatus)) error.authStatus = metadata.authStatus;
+  if (Number.isInteger(metadata.verificationAttempts))
+    error.verificationAttempts = metadata.verificationAttempts;
   return error;
 }
 
@@ -295,9 +354,7 @@ async function runSmoke() {
     activeStage = 'authenticated_navigation';
     console.log('[synthetic:cbp] Waiting for authenticated dashboard');
     try {
-      await page.waitForURL((url) => isAuthenticatedNavigationTerminal(url, origin, baseUrl), {
-        timeout: timeoutMs,
-      });
+      await waitForAuthenticatedOutcome(page, origin);
     } catch (error) {
       // Chromium/Playwright can report a superseded top-level navigation as
       // ERR_ABORTED even after the browser has committed the intended dashboard
@@ -359,16 +416,24 @@ async function runSmoke() {
     const failure = classifyFailure(error, activeStage, page.url(), origin);
     const errorMessage = conciseErrorMessage(error);
     const currentLocation = formatSyntheticLocation(page.url());
+    const authStatus = Number.isInteger(error?.authStatus) ? error.authStatus : null;
+    const verificationAttempts = Number.isInteger(error?.verificationAttempts)
+      ? error.verificationAttempts
+      : null;
     return {
       ok: false,
       error: new Error(errorMessage),
       failureStage: failure.failureStage,
       failureClass: failure.failureClass,
+      authStatus,
+      verificationAttempts,
       details: [
         `Origin: ${origin}`,
         `Tenant slug: ${tenantSlug || '(tenant URL override)'}`,
         `Failure stage: ${failure.failureStage}`,
         `Failure class: ${failure.failureClass}`,
+        authStatus ? `Auth response status: HTTP ${authStatus}` : '',
+        verificationAttempts ? `Verification attempts: ${verificationAttempts}` : '',
         `Current URL: ${currentLocation}`,
         `Error: ${errorMessage}`,
         documentObservations.length > 0
@@ -397,7 +462,8 @@ if (!result.ok) {
   if (
     previous.status !== 'firing' ||
     previous.lastError !== result.error.message ||
-    previous.lastFailureClass !== result.failureClass
+    previous.lastFailureClass !== result.failureClass ||
+    previous.lastAuthStatus !== result.authStatus
   ) {
     await sendDiscord({
       status: 'firing',
@@ -411,6 +477,8 @@ if (!result.ok) {
     lastError: result.error.message,
     lastFailureStage: result.failureStage,
     lastFailureClass: result.failureClass,
+    lastAuthStatus: result.authStatus,
+    lastVerificationAttempts: result.verificationAttempts,
     lastCheckedAt: new Date().toISOString(),
     durationMs,
   });
@@ -432,6 +500,8 @@ saveState({
   lastError: '',
   lastFailureStage: '',
   lastFailureClass: '',
+  lastAuthStatus: null,
+  lastVerificationAttempts: null,
   lastCheckedAt: new Date().toISOString(),
   durationMs,
 });

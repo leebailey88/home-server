@@ -28,6 +28,8 @@ The synthetic browser context also blocks service workers. Community Bank Pilot'
 
 The login flow deliberately does **not** wait for global browser `networkidle`. Modern Next.js pages may continuously prefetch or perform background requests, so `networkidle` is not a reliable signal that authentication completed. The monitor instead waits for the expected dashboard URL and visible dashboard marker.
 
+While waiting for authenticated navigation, the monitor also watches Community Bank Pilot's narrow machine-readable login-failure marker. That marker contains only a stable failure class plus optional numeric auth response status and bounded verification-attempt count. It never contains credentials, cookies, tokens, provider response bodies, or arbitrary error text. A classified in-page login failure therefore fails immediately instead of being reduced to a 30-second `login_not_completed` timeout.
+
 A Playwright URL-wait exception is also not independently authoritative after Chromium has already committed the exact tenant dashboard root. Browser navigation bookkeeping can report a superseded navigation as `ERR_ABORTED` even though the intended document has committed. In that one case the monitor continues to the existing semantic dashboard-marker and page-health checks. It does **not** recover URL-wait failures while still on `/auth/post-login`, `/login`, another origin, or any other tenant path. The dashboard marker remains mandatory, so this hardening does not turn an incomplete or broken dashboard into a passing check.
 
 ## Authenticated failure semantics
@@ -36,11 +38,18 @@ The synthetic monitor treats the tenant dashboard root as the only successful po
 
 Important classes include:
 
+- `auth_sign_in_dependency_failed` — the application could not complete the password-exchange dependency call; the password submission itself is not retried.
+- `auth_user_verification_failed` — password exchange completed, but authoritative user verification still failed after Community Bank Pilot's one bounded verification retry.
+- `mfa_assurance_dependency_failed` — user verification completed, but the browser could not verify MFA assurance after one bounded verification retry.
+- `rate_limited` — the application rejected the synthetic login under the normal login throttle.
+- `invalid_credentials` — the configured synthetic credentials were rejected.
 - `workspace_setup_misroute` — an already configured tenant synthetic user reached the apex `/auth/setup-workspace` route. This is terminal and fails immediately rather than consuming the full navigation timeout.
 - `post_login_stalled` — the browser remained on the tenant `/auth/post-login` route until the navigation timeout.
-- `login_not_completed` — authenticated navigation returned to the tenant login route.
+- `login_not_completed` — the browser remained on the tenant login route without a classified application login failure marker.
 - `dashboard_navigation_timeout` — navigation stayed on the tenant origin but never reached the dashboard root.
 - `report_check_failed` — authentication completed, but a configured banker-facing report navigation or validation failed.
+
+When application failure evidence contains a valid numeric auth response status or verification-attempt count, the alert includes those metadata fields. They are diagnostic metadata only; no provider response body or session material is collected.
 
 If an interrupted URL wait is recovered only because the browser has already committed the exact tenant dashboard root, the `Visited:` evidence includes `dashboard:navigation-wait-recovered` before the mandatory `dashboard:ok` marker. This preserves the navigation anomaly as safe diagnostic evidence without paging on it by itself.
 
@@ -107,7 +116,7 @@ A successful run should record `dashboard:ok` and each configured report path in
 
 A successful run that recovered only an interrupted Playwright URL wait after the exact dashboard URL had already committed records `dashboard:navigation-wait-recovered | dashboard:ok`. The semantic dashboard and all configured report checks still must pass.
 
-A failed run should include `Failure stage`, `Failure class`, `Current URL`, the bounded `Documents` trail, screenshot path when available, and the explicit routes already visited. The saved state also keeps the last failure stage/class; a changed failure class can produce a new alert even if the concise error line is unchanged.
+A failed run should include `Failure stage`, `Failure class`, `Current URL`, the bounded `Documents` trail, screenshot path when available, and the explicit routes already visited. Classified in-page auth failures also include safe numeric `Auth response status` and `Verification attempts` fields when the application provided them. The saved state keeps the last failure stage/class/status so a materially changed auth failure can produce a fresh alert.
 
 ## Timer
 
@@ -130,7 +139,7 @@ The monitor keeps state in:
 /var/lib/home-server-synthetic-monitor/cbp-authenticated-smoke-state.json
 ```
 
-It sends Discord alerts on first failure, changed failure message/class, and recovery.
+It sends Discord alerts on first failure, changed failure message/class/status, and recovery.
 
 Screenshots from failed browser runs are written to:
 
