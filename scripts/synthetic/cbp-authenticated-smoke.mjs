@@ -34,6 +34,8 @@ const headless = process.env.CBP_SYNTHETIC_HEADLESS !== 'false';
 const screenshotDir =
   process.env.CBP_SYNTHETIC_SCREENSHOT_DIR || '/var/log/home-server-synthetic-monitor';
 const hostname = os.hostname();
+const LOGIN_FORM_FILL_ATTEMPTS = 2;
+const LOGIN_FORM_STABILITY_MS = 500;
 
 const readOnlyPaths = (
   process.env.CBP_SYNTHETIC_READ_ONLY_PATHS || DEFAULT_CBP_READ_ONLY_PATHS.join(',')
@@ -137,6 +139,14 @@ async function firstVisible(locator, label) {
   throw new Error(`Could not find visible ${label}.`);
 }
 
+async function loginFormValuesMatch(emailInput, passwordInput) {
+  const [emailValue, passwordValue] = await Promise.all([
+    emailInput.inputValue(),
+    passwordInput.inputValue(),
+  ]);
+  return emailValue === email && passwordValue === password;
+}
+
 async function fillLoginForm(page) {
   const emailInput = await firstVisible(
     page.locator(
@@ -144,27 +154,51 @@ async function fillLoginForm(page) {
     ),
     'email input',
   );
-  await emailInput.fill(email);
-
   const passwordInput = await firstVisible(
     page.locator(
       'input[type="password"], input[name="password"], input[autocomplete="current-password"], input[placeholder*="password" i]',
     ),
     'password input',
   );
-  await passwordInput.fill(password);
 
   const submit = page
     .locator('button[type="submit"], input[type="submit"], button')
     .filter({ hasText: /sign in|log in|login|continue/i })
     .first();
 
-  if (await submit.isVisible().catch(() => false)) {
-    await submit.click();
+  for (let attempt = 1; attempt <= LOGIN_FORM_FILL_ATTEMPTS; attempt += 1) {
+    await emailInput.fill(email);
+    await passwordInput.fill(password);
+
+    // The login form is a hydrated React component. A synthetic can interact
+    // after DOMContentLoaded but before hydration finishes, allowing React to
+    // restore an input to its empty default after Playwright filled it. Require
+    // both values to survive a short stability window before any submission.
+    await page.waitForTimeout(LOGIN_FORM_STABILITY_MS);
+    if (!(await loginFormValuesMatch(emailInput, passwordInput))) {
+      continue;
+    }
+
+    // Re-read immediately before the click/Enter as a final guard against a
+    // late render between the stability check and the actual submission.
+    if (!(await loginFormValuesMatch(emailInput, passwordInput))) {
+      continue;
+    }
+
+    if (await submit.isVisible().catch(() => false)) {
+      await submit.click();
+      return;
+    }
+
+    await passwordInput.press('Enter');
     return;
   }
 
-  await passwordInput.press('Enter');
+  throw makeSyntheticFailure(
+    'Synthetic login form did not retain both credential fields after hydration.',
+    'synthetic_instrumentation',
+    'login_form_not_stable',
+  );
 }
 
 async function readAuthFailureEvidence(page) {
@@ -200,7 +234,18 @@ async function waitForAuthenticatedOutcome(page, origin) {
     }))
     .catch(() => ({ kind: 'marker_closed' }));
 
-  const outcome = await Promise.race([navigationPromise, authFailurePromise]);
+  const clientValidationPromise = page
+    .getByText(/Please enter a valid email address|Password must be at least 6 characters/i)
+    .first()
+    .waitFor({ state: 'visible', timeout: 0 })
+    .then(() => ({ kind: 'client_validation' }))
+    .catch(() => ({ kind: 'validation_closed' }));
+
+  const outcome = await Promise.race([
+    navigationPromise,
+    authFailurePromise,
+    clientValidationPromise,
+  ]);
 
   if (outcome.kind === 'auth_failure') {
     throw makeSyntheticFailure(
@@ -214,8 +259,16 @@ async function waitForAuthenticatedOutcome(page, origin) {
     );
   }
 
+  if (outcome.kind === 'client_validation') {
+    throw makeSyntheticFailure(
+      'Synthetic credentials were rejected by client-side form validation before authentication completed.',
+      'synthetic_instrumentation',
+      'login_form_client_validation',
+    );
+  }
+
   if (outcome.kind === 'navigation_error') throw outcome.error;
-  if (outcome.kind === 'marker_closed') {
+  if (outcome.kind === 'marker_closed' || outcome.kind === 'validation_closed') {
     const navigationOutcome = await navigationPromise;
     if (navigationOutcome.kind === 'navigation_error') throw navigationOutcome.error;
   }
@@ -281,6 +334,7 @@ function classifyFailure(error, activeStage, currentUrl, origin) {
 
   const fallbackByStage = {
     login_page: 'login_page_failed',
+    login_form_preparation: 'login_form_preparation_failed',
     login_submission: 'login_submission_failed',
     dashboard_validation: 'dashboard_validation_failed',
     report_navigation: 'report_check_failed',
@@ -349,7 +403,8 @@ async function runSmoke() {
     }
     visited.push(`login:${loginResponse.status()}`);
 
-    activeStage = 'login_submission';
+    activeStage = 'login_form_preparation';
+    await page.waitForLoadState('load', { timeout: timeoutMs });
     await fillLoginForm(page);
     activeStage = 'authenticated_navigation';
     console.log('[synthetic:cbp] Waiting for authenticated dashboard');
