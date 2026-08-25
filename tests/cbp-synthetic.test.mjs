@@ -114,11 +114,43 @@ test('normalizes only safe application auth failure evidence', () => {
 });
 
 test('synthetic races dashboard navigation against classified in-page auth failure evidence', () => {
-  assert.match(syntheticScript, /Promise\.race\(\[navigationPromise, authFailurePromise\]\)/);
+  assert.match(syntheticScript, /Promise\.race\(\[\s*navigationPromise,\s*authFailurePromise,/);
   assert.match(syntheticScript, /data-auth-failure-class/);
   assert.match(syntheticScript, /Auth response status: HTTP/);
   assert.match(syntheticScript, /Verification attempts:/);
   assert.match(syntheticScript, /lastAuthStatus/);
+});
+
+test('stabilizes hydrated login fields before authentication submission', () => {
+  assert.match(syntheticScript, /const LOGIN_FORM_FILL_ATTEMPTS = 2;/);
+  assert.match(syntheticScript, /const LOGIN_FORM_STABILITY_MS = 500;/);
+  assert.match(syntheticScript, /waitForLoadState\('load', \{ timeout: timeoutMs \}\)/);
+  assert.match(syntheticScript, /emailInput\.inputValue\(\)/);
+  assert.match(syntheticScript, /passwordInput\.inputValue\(\)/);
+  assert.match(syntheticScript, /login_form_not_stable/);
+
+  const fillIndex = syntheticScript.indexOf('await emailInput.fill(email)');
+  const stabilityIndex = syntheticScript.indexOf(
+    'await page.waitForTimeout(LOGIN_FORM_STABILITY_MS)',
+  );
+  const verificationIndex = syntheticScript.indexOf(
+    'await loginFormValuesMatch(emailInput, passwordInput)',
+  );
+  const submitIndex = syntheticScript.indexOf('await submit.click()');
+
+  assert.ok(fillIndex >= 0);
+  assert.ok(stabilityIndex > fillIndex);
+  assert.ok(verificationIndex > stabilityIndex);
+  assert.ok(submitIndex > verificationIndex);
+});
+
+test('classifies client-side credential validation as synthetic instrumentation', () => {
+  assert.match(
+    syntheticScript,
+    /Please enter a valid email address\|Password must be at least 6 characters/,
+  );
+  assert.match(syntheticScript, /kind: 'client_validation'/);
+  assert.match(syntheticScript, /'synthetic_instrumentation',\s*'login_form_client_validation'/);
 });
 
 test('independent authenticated smoke blocks browser-resume service workers', () => {
