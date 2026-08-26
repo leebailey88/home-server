@@ -5,6 +5,11 @@ import path from 'node:path';
 import process from 'node:process';
 import YAML from 'yaml';
 
+import {
+  correlateRetryResults,
+  formatResponseDiagnostics,
+} from './lib/external-uptime-monitor.mjs';
+
 const configPath = process.env.HOME_SERVER_CONFIG || 'config/sites.yaml';
 const stateFile =
   process.env.HOME_SERVER_EXTERNAL_MONITOR_STATE_FILE ||
@@ -13,8 +18,13 @@ const timeoutMs = Number.parseInt(
   process.env.HOME_SERVER_EXTERNAL_MONITOR_TIMEOUT_MS || '10000',
   10,
 );
+const retryDelayMs = Number.parseInt(
+  process.env.HOME_SERVER_EXTERNAL_MONITOR_RETRY_DELAY_MS || '5000',
+  10,
+);
 const userAgent =
-  process.env.HOME_SERVER_EXTERNAL_MONITOR_USER_AGENT || 'home-server-external-uptime-monitor/1.0';
+  process.env.HOME_SERVER_EXTERNAL_MONITOR_USER_AGENT ||
+  'home-server-external-uptime-monitor/1.0';
 const hostname = os.hostname();
 
 function readConfig() {
@@ -127,12 +137,14 @@ async function checkOne(check) {
     };
   }
 
+  const responseDiagnostics = formatResponseDiagnostics(response.headers);
+
   if (response.status !== check.expectedStatus) {
     return {
       ...check,
       ok: false,
       latencyMs: Date.now() - startedAt,
-      reason: `expected HTTP ${check.expectedStatus}, got ${response.status}`,
+      reason: `expected HTTP ${check.expectedStatus}, got ${response.status}${responseDiagnostics}`,
     };
   }
 
@@ -141,7 +153,7 @@ async function checkOne(check) {
       ...check,
       ok: false,
       latencyMs: Date.now() - startedAt,
-      reason: `body did not contain ${JSON.stringify(check.expectedBodyContains)}`,
+      reason: `body did not contain ${JSON.stringify(check.expectedBodyContains)}${responseDiagnostics}`,
     };
   }
 
@@ -162,6 +174,10 @@ function formatResults(results) {
     .join('\n');
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
+}
+
 const config = readConfig();
 const checks = collectPublicChecks(config);
 
@@ -170,15 +186,49 @@ if (checks.length === 0) {
   process.exit(2);
 }
 
-console.log(`[external-monitor] Checking ${checks.length} public endpoint(s) from ${configPath}`);
-const results = await Promise.all(checks.map(checkOne));
-const failures = results.filter((result) => !result.ok);
+console.log(
+  `[external-monitor] Checking ${checks.length} public endpoint(s) from ${configPath}`,
+);
+const initialResults = await Promise.all(checks.map(checkOne));
+const initialFailures = initialResults.filter((result) => !result.ok);
+console.log(formatResults(initialResults));
+
+let results = initialResults;
+let failures = initialFailures;
+
+if (initialFailures.length > 0) {
+  console.warn(
+    `[external-monitor] ${initialFailures.length} endpoint(s) failed; retrying failed endpoints in ${retryDelayMs}ms`,
+  );
+  await sleep(retryDelayMs);
+
+  const retryResults = await Promise.all(initialFailures.map(checkOne));
+  console.log('[external-monitor] Retry results:');
+  console.log(formatResults(retryResults));
+
+  const correlated = correlateRetryResults(initialFailures, retryResults);
+  failures = correlated.persistent;
+
+  for (const { initial } of correlated.transient) {
+    console.warn(
+      `[WARN] transient external failure cleared on retry: ${initial.key}: ${initial.url} ${initial.reason}`,
+    );
+  }
+
+  const retryByKey = new Map(retryResults.map((result) => [result.key, result]));
+  results = initialResults.map((result) => retryByKey.get(result.key) || result);
+
+  if (failures.length === 0) {
+    console.warn(
+      '[external-monitor] All initial failures cleared on retry; suppressing critical transition.',
+    );
+  }
+}
+
 const details = formatResults(results);
 const previous = loadState();
 const failingKeys = failures.map((failure) => failure.key).sort();
 const currentStatus = failures.length > 0 ? 'firing' : 'ok';
-
-console.log(details);
 
 if (failures.length > 0) {
   const previousFailingKeys = new Set(previous.failingKeys || []);
