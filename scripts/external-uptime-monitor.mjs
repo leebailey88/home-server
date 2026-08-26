@@ -23,8 +23,7 @@ const retryDelayMs = Number.parseInt(
   10,
 );
 const userAgent =
-  process.env.HOME_SERVER_EXTERNAL_MONITOR_USER_AGENT ||
-  'home-server-external-uptime-monitor/1.0';
+  process.env.HOME_SERVER_EXTERNAL_MONITOR_USER_AGENT || 'home-server-external-uptime-monitor/1.0';
 const hostname = os.hostname();
 
 function readConfig() {
@@ -186,9 +185,7 @@ if (checks.length === 0) {
   process.exit(2);
 }
 
-console.log(
-  `[external-monitor] Checking ${checks.length} public endpoint(s) from ${configPath}`,
-);
+console.log(`[external-monitor] Checking ${checks.length} public endpoint(s) from ${configPath}`);
 const initialResults = await Promise.all(checks.map(checkOne));
 const initialFailures = initialResults.filter((result) => !result.ok);
 console.log(formatResults(initialResults));

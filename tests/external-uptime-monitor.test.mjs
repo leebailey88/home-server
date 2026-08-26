@@ -31,9 +31,7 @@ test('external monitor only keeps endpoint failures that persist on retry', () =
 });
 
 test('external monitor fails closed when a retry result is missing', () => {
-  const initialFailures = [
-    { key: 'parcelwing/public-3', ok: false, reason: 'got 523' },
-  ];
+  const initialFailures = [{ key: 'parcelwing/public-3', ok: false, reason: 'got 523' }];
 
   const correlated = correlateRetryResults(initialFailures, []);
 
