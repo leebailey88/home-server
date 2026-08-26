@@ -30,6 +30,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
 HOME_SERVER_CONFIG=$REPO_DIR/config/sites.yaml
 HOME_SERVER_EXTERNAL_MONITOR_STATE_FILE=$STATE_DIR/state.json
 HOME_SERVER_EXTERNAL_MONITOR_TIMEOUT_MS=10000
+HOME_SERVER_EXTERNAL_MONITOR_RETRY_DELAY_MS=5000
 HOME_SERVER_EXTERNAL_MONITOR_USER_AGENT=home-server-external-uptime-monitor/1.0
 
 # Reuse the same Discord webhooks as the NUC monitor, or set dedicated external monitor webhooks.
