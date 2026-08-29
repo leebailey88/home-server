@@ -17,7 +17,7 @@
     "static:list": "node scripts/list-static-releases.mjs",
     "static:rollback": "node scripts/rollback-static-site.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --write . && git diff --exit-code",
+    "format:check": "prettier --check .",
     "validate": "pnpm format && pnpm lint:md && pnpm lint:shell && pnpm test && pnpm validate:sites && pnpm render:nginx && pnpm render:cloudflared",
     "validate:check": "pnpm format:check && pnpm lint:md && pnpm lint:shell && pnpm test && pnpm validate:sites && pnpm render:nginx && pnpm render:cloudflared",
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
