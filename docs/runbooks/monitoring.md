@@ -35,6 +35,12 @@ header reaches the intended upstream without depending on framework-specific
 root-page rendering. Proxy sites without a health identity, and static sites,
 keep their configured root-page status/body checks.
 
+Local Nginx hostname checks use Node's raw HTTP client rather than `fetch()` so
+the synthetic `Host` header is transmitted exactly on the wire. Browser-style
+fetch implementations may normalize or replace `Host` with the loopback URL's
+host, which can silently exercise Nginx's default virtual server instead of the
+configured hostname.
+
 Background jobs are intentionally not part of this check.
 
 ### Gateway debounce

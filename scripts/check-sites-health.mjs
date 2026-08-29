@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import process from 'node:process';
+import { requestHealthUrl } from './lib/health-http-request.mjs';
 import { localNginxRouteCheckForSite } from './lib/site-health-checks.mjs';
 import { loadSitesConfig, nginxListenToUrl } from './lib/sites-config.mjs';
 
@@ -42,7 +43,7 @@ async function checkUrl(label, rawCheck, init = {}) {
   const startedAt = Date.now();
 
   try {
-    const response = await fetch(check.url, {
+    const response = await requestHealthUrl(check.url, {
       ...init,
       signal: AbortSignal.timeout(timeoutMs),
     });
