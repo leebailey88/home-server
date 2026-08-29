@@ -1,0 +1,10 @@
+[Unit]
+Description=Conservative Docker storage maintenance
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash {{REPO_ROOT}}/scripts/docker-storage-maintenance.sh
+Nice=10
+IOSchedulingClass=idle
+IOSchedulingPriority=7
