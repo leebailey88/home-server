@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import process from 'node:process';
+import { localNginxRouteCheckForSite } from './lib/site-health-checks.mjs';
 import { loadSitesConfig, nginxListenToUrl } from './lib/sites-config.mjs';
 
 const { defaults, enabledSites, selectedConfigPath } = loadSitesConfig();
@@ -114,15 +115,14 @@ for (const site of enabledSites) {
 
   const listen = site.nginxListen || defaults.nginxListen || '127.0.0.1:80';
   const nginxUrl = nginxListenToUrl(listen);
+  const localRouteCheck = localNginxRouteCheckForSite(site, nginxUrl);
+
   for (const configuredHostname of site.hostnames) {
     const hostname = concreteHostnameForCheck(configuredHostname);
 
     await checkUrl(
       `${site.key} local nginx route (${hostname})`,
-      {
-        ...siteExpectations,
-        url: nginxUrl,
-      },
+      localRouteCheck,
       {
         headers: {
           Host: hostname,
