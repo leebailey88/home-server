@@ -47,6 +47,9 @@ nginx/
   generated/                     Generated Nginx config, ignored by git
 scripts/
   bootstrap-nuc.sh               Installs base host packages for the web gateway
+  docker-storage-maintenance.sh  Conservatively prunes stale Docker artifacts
+  install-docker-storage-maintenance.sh
+                                 Installs the Docker maintenance systemd timer
   validate-sites-config.mjs      Validates config/sites.yaml or the example fallback
   render-nginx-config.mjs        Generates Nginx config from sites.yaml
   render-cloudflared-config.mjs  Generates Cloudflare Tunnel config from sites.yaml
@@ -63,6 +66,8 @@ systemd/                         systemd service/timer templates
 docs/
   architecture.md                System design notes
   runbooks/bootstrap-nuc.md      First-host setup steps
+  runbooks/docker-storage-maintenance.md
+                                 Safe Docker cleanup policy and operations
   runbooks/monitoring.md         Gateway monitor operations
   runbooks/static-sites.md       Static site deploy/list/rollback operations
 ```
@@ -109,6 +114,20 @@ sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/install-nginx-co
 sudo HOME_SERVER_CONFIG="$(pwd)/config/sites.yaml" bash scripts/check-health.sh
 ```
 
+Bootstrap installs the conservative Docker storage-maintenance timer automatically. On another systemd-based Linux or WSL development machine, install the same timer with:
+
+```bash
+pnpm install:docker-storage-maintenance
+```
+
+Run the same cleanup policy immediately with:
+
+```bash
+pnpm docker:storage:maintain
+```
+
+The policy prunes unused build cache older than 7 days, stopped containers older than 30 days, and dangling images older than 7 days. It never prunes Docker volumes or tagged unused images. See `docs/runbooks/docker-storage-maintenance.md`.
+
 To deploy a static site build:
 
 ```bash
@@ -148,6 +167,7 @@ Keep public HTTP ports closed. Nginx should listen on localhost and receive traf
 - Do not bind app containers to `0.0.0.0` unless deliberately exposing on LAN.
 - Prefer `127.0.0.1:<port>` for every app container.
 - Keep SSH Cloudflare Access separate from web hostnames.
+- Keep automated Docker storage cleanup conservative: never prune volumes or tagged rollback images as routine maintenance.
 - Model standalone applications under a wildcard namespace as exact site entries. For example, `ingredients.altamontiq.com` is a separate app from the Altamont IQ `*.altamontiq.com` tenant wildcard.
 - Deploy and verify a new loopback upstream before installing an enabled gateway route, because the gateway monitor checks every enabled site's upstream immediately.
 - Stage Grizzly Bulls at `nuc-grizzly.grizzlybulls.com` before moving production DNS.
