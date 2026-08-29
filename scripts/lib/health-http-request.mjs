@@ -13,7 +13,9 @@ function hasHeader(entries, name) {
 }
 
 function decodeBody(buffer, encoding) {
-  const normalizedEncoding = String(encoding || '').trim().toLowerCase();
+  const normalizedEncoding = String(encoding || '')
+    .trim()
+    .toLowerCase();
 
   if (!normalizedEncoding || normalizedEncoding === 'identity') return buffer;
   if (normalizedEncoding === 'gzip') return gunzipSync(buffer);
@@ -44,7 +46,10 @@ function rawHttpRequest(url, init, entries) {
         response.on('error', reject);
         response.on('end', () => {
           try {
-            const decodedBody = decodeBody(Buffer.concat(chunks), response.headers['content-encoding']);
+            const decodedBody = decodeBody(
+              Buffer.concat(chunks),
+              response.headers['content-encoding'],
+            );
             const status = response.statusCode || 0;
 
             resolve({
