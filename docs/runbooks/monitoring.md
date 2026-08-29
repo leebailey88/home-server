@@ -32,8 +32,13 @@ For proxy sites that define both `healthUrl` and `healthBodyContains`, each
 local Nginx hostname check replays the health endpoint path through Nginx and
 requires the configured service-identity marker. This verifies that the Host
 header reaches the intended upstream without depending on framework-specific
-root-page rendering. Proxy sites without a health identity, and static sites,
-keep their configured root-page status/body checks.
+root-page rendering. Proxy sites without a health identity keep their
+configured root-page status/body checks.
+
+Static sites use a generated exact Nginx sentinel at `/_home-server-health`
+with a site-specific body such as `home-server-static:altamont-previews`.
+This verifies the virtual-host route without requiring a root `index.html` or
+coupling monitoring to one path-addressed preview release.
 
 Local Nginx hostname checks use Node's raw HTTP client rather than `fetch()` so
 the synthetic `Host` header is transmitted exactly on the wire. Browser-style
@@ -142,9 +147,14 @@ Nginx hostname check calls the same health path through `127.0.0.1:80` with the
 configured Host header to verify routing to that exact service. This is
 preferred over using mutable marketing-page text as the routing identity.
 
-Static sites can use the same `expectedStatus`, `expectedBodyContains`, and
-`publicHealthChecks` fields. Proxy sites without `healthBodyContains` also keep
-their existing root-page `expectedBodyContains` behavior.
+Static sites do not need a root landing page solely for health monitoring.
+Their generated Nginx server block exposes `/_home-server-health`, and the
+local gateway check requires the matching `home-server-static:<site-key>`
+identity. `publicHealthChecks` can still target a real public preview path when
+end-user content availability should also be monitored.
+
+Proxy sites without `healthBodyContains` keep their existing root-page
+`expectedBodyContains` behavior.
 
 ## Environment
 
