@@ -79,10 +79,29 @@ cloudflared/generated/config.yml
 sudo bash scripts/bootstrap-nuc.sh
 ```
 
-Bootstrap also installs and enables the Wi-Fi self-healing watchdog. It
-discovers the active default-route interface and NetworkManager profile at
-runtime, so the repo does not contain a machine-specific interface, SSID, or
-BSSID. If Ethernet is the default route, the watchdog remains inactive.
+Bootstrap installs and enables both the Wi-Fi self-healing watchdog and the
+conservative Docker storage-maintenance timer.
+
+The Docker maintenance policy prunes unused build cache older than 7 days,
+stopped containers older than 30 days, and dangling images older than 7 days.
+It does not prune volumes, tagged unused images, or anything referenced by a
+container. Bootstrap only installs the timer; it does not run an immediate
+cleanup.
+
+Verify the Docker maintenance timer with:
+
+```bash
+sudo systemctl status home-server-docker-storage-maintenance.timer --no-pager
+sudo systemctl list-timers home-server-docker-storage-maintenance.timer --all
+```
+
+See `docs/runbooks/docker-storage-maintenance.md` for the safety contract,
+manual invocation, retention overrides, and troubleshooting.
+
+The Wi-Fi recovery service discovers the active default-route interface and
+NetworkManager profile at runtime, so the repo does not contain a
+machine-specific interface, SSID, or BSSID. If Ethernet is the default route,
+the watchdog remains inactive.
 
 Verify the recovery timer with:
 

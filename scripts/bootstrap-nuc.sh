@@ -49,6 +49,9 @@ log "Allowing SSH through UFW; web traffic should arrive through cloudflared, no
 ufw allow OpenSSH || true
 ufw --force enable || true
 
+log "Installing conservative Docker storage maintenance..."
+bash "${SCRIPT_DIR}/install-docker-storage-maintenance.sh"
+
 log "Installing Wi-Fi self-healing watchdog..."
 bash "${SCRIPT_DIR}/install-network-recovery-service.sh"
 

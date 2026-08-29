@@ -13,7 +13,9 @@ function hasHeader(entries, name) {
 }
 
 function decodeBody(buffer, encoding) {
-  const normalizedEncoding = String(encoding || '').trim().toLowerCase();
+  const normalizedEncoding = String(encoding || '')
+    .trim()
+    .toLowerCase();
 
   if (!normalizedEncoding || normalizedEncoding === 'identity') return buffer;
   if (normalizedEncoding === 'gzip') return gunzipSync(buffer);

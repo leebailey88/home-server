@@ -121,15 +121,11 @@ for (const site of enabledSites) {
   for (const configuredHostname of site.hostnames) {
     const hostname = concreteHostnameForCheck(configuredHostname);
 
-    await checkUrl(
-      `${site.key} local nginx route (${hostname})`,
-      localRouteCheck,
-      {
-        headers: {
-          Host: hostname,
-        },
+    await checkUrl(`${site.key} local nginx route (${hostname})`, localRouteCheck, {
+      headers: {
+        Host: hostname,
       },
-    );
+    });
   }
 
   const publicChecks = publicHealthChecksForSite(site);

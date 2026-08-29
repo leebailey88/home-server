@@ -1,7 +1,4 @@
-import {
-  STATIC_ROUTE_HEALTH_PATH,
-  staticRouteHealthBody,
-} from './static-route-health.mjs';
+import { STATIC_ROUTE_HEALTH_PATH, staticRouteHealthBody } from './static-route-health.mjs';
 
 export function localNginxRouteCheckForSite(site, nginxUrl) {
   if (site.kind === 'static') {
