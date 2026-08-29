@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { staticRouteHealthLocation } from './lib/static-route-health.mjs';
 import { loadSitesConfig } from './lib/sites-config.mjs';
 
 const repoRoot = process.cwd();
@@ -50,6 +51,7 @@ for (const site of enabledSites) {
       ...common,
       root: site.root,
       index: site.index || 'index.html',
+      healthLocation: staticRouteHealthLocation(site.key),
     });
   }
 
