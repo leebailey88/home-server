@@ -100,6 +100,25 @@ sites:
     index: index.html
     notes: Customer-shareable Altamont Advisory interactive wireframes and prototypes.
 
+  # Exact application carve-outs must remain separate from the Altamont IQ
+  # wildcard tenant route below. Nginx selects this exact server_name ahead of
+  # *.altamontiq.com; keeping it earlier also makes the tunnel ingress intent clear.
+  - key: altamont-ingredients
+    enabled: true
+    kind: proxy
+    hostnames:
+      - ingredients.altamontiq.com
+    upstream: http://127.0.0.1:8084
+    healthUrl: http://127.0.0.1:8084/api/health
+    healthBodyContains: '"service":"altamont-ingredients"'
+    expectedStatus: 200
+    expectedBodyContains: Altamont Ingredients
+    publicHealthChecks:
+      - url: https://ingredients.altamontiq.com/api/health
+        expectedStatus: 200
+        expectedBodyContains: '"service":"altamont-ingredients"'
+    notes: Standalone Altamont Ingredients Next.js app, deployed by the altamont-ingredients repo.
+
   - key: altamont-iq
     enabled: true
     kind: proxy

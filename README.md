@@ -27,16 +27,19 @@ cloudflared on the NUC
 Nginx on the NUC
   ↓
 localhost-bound apps and static roots
-    - grizzly-bulls       127.0.0.1:8080
-    - future-static-site  /opt/nuc-web/sites/<site>/current
-    - future-next-site    127.0.0.1:8081
+    - grizzly-bulls          127.0.0.1:8080
+    - altamont-iq            127.0.0.1:8082
+    - community-bank-pilot   127.0.0.1:8083
+    - altamont-ingredients   127.0.0.1:8084
+    - static sites           /opt/nuc-web/sites/<site>/current
 ```
 
 ## Repo layout
 
 ```text
 config/
-  sites.example.yaml             Example declarative site registry
+  sites.yaml                     Production declarative site registry
+  sites.example.yaml             Generic example/fallback site registry
   cloudflared.example.yml        Handwritten Cloudflare Tunnel example
 cloudflared/generated/           Generated tunnel config, ignored by git
 nginx/
@@ -131,8 +134,10 @@ Reserve ports like this unless there is a strong reason to change them:
 |  Port | Service                                        |
 | ----: | ---------------------------------------------- |
 |  8080 | Grizzly Bulls                                  |
-|  8081 | Static site / future app #1                    |
-|  8082 | Static site / future app #2                    |
+|  8081 | Reserved / future app                          |
+|  8082 | Altamont IQ                                    |
+|  8083 | Community Bank Pilot                           |
+|  8084 | Altamont Ingredients                           |
 | 8090+ | Internal/admin tools                           |
 |  400x | Existing money-bot / IB Gateway host API ports |
 
@@ -143,5 +148,7 @@ Keep public HTTP ports closed. Nginx should listen on localhost and receive traf
 - Do not bind app containers to `0.0.0.0` unless deliberately exposing on LAN.
 - Prefer `127.0.0.1:<port>` for every app container.
 - Keep SSH Cloudflare Access separate from web hostnames.
+- Model standalone applications under a wildcard namespace as exact site entries. For example, `ingredients.altamontiq.com` is a separate app from the Altamont IQ `*.altamontiq.com` tenant wildcard.
+- Deploy and verify a new loopback upstream before installing an enabled gateway route, because the gateway monitor checks every enabled site's upstream immediately.
 - Stage Grizzly Bulls at `nuc-grizzly.grizzlybulls.com` before moving production DNS.
 - Keep the existing production droplet available until NUC hosting has run cleanly for several days.
