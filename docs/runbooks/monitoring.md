@@ -28,6 +28,13 @@ It validates:
 - optional expected HTTP statuses and response text
 - optional public HTTPS checks through Cloudflare, DNS, and the tunnel
 
+For proxy sites that define both `healthUrl` and `healthBodyContains`, each
+local Nginx hostname check replays the health endpoint path through Nginx and
+requires the configured service-identity marker. This verifies that the Host
+header reaches the intended upstream without depending on framework-specific
+root-page rendering. Proxy sites without a health identity, and static sites,
+keep their configured root-page status/body checks.
+
 Background jobs are intentionally not part of this check.
 
 ### Gateway debounce
@@ -113,6 +120,7 @@ sites:
       - www.grizzlybulls.com
     upstream: http://127.0.0.1:8080
     healthUrl: http://127.0.0.1:8080/api/health
+    healthBodyContains: '"service":"grizzly-bulls"'
     publicHealthChecks:
       - url: https://grizzlybulls.com/api/health
         expectedStatus: 200
@@ -122,8 +130,15 @@ sites:
         expectedBodyContains: Grizzly Bulls
 ```
 
+When `healthBodyContains` is present on a proxy site, it serves two purposes:
+the direct upstream health check verifies the service itself, and the local
+Nginx hostname check calls the same health path through `127.0.0.1:80` with the
+configured Host header to verify routing to that exact service. This is
+preferred over using mutable marketing-page text as the routing identity.
+
 Static sites can use the same `expectedStatus`, `expectedBodyContains`, and
-`publicHealthChecks` fields.
+`publicHealthChecks` fields. Proxy sites without `healthBodyContains` also keep
+their existing root-page `expectedBodyContains` behavior.
 
 ## Environment
 
