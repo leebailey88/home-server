@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly conservative Docker storage maintenance
+
+[Timer]
+OnCalendar=Sun *-*-* 03:30:00
+Persistent=true
+RandomizedDelaySec=30m
+AccuracySec=5m
+
+[Install]
+WantedBy=timers.target
