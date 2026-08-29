@@ -67,10 +67,10 @@ test('static site local route uses the generated virtual-host sentinel', () => {
 });
 
 test('static virtual-host sentinel is exact, stable, and site-specific', () => {
-  assert.equal(
-    staticRouteHealthBody('altamont-previews'),
-    'home-server-static:altamont-previews',
-  );
+  assert.equal(staticRouteHealthBody('altamont-previews'), 'home-server-static:altamont-previews');
   assert.match(staticRouteHealthLocation('altamont-previews'), /location = \/_home-server-health/);
-  assert.match(staticRouteHealthLocation('altamont-previews'), /home-server-static:altamont-previews/);
+  assert.match(
+    staticRouteHealthLocation('altamont-previews'),
+    /home-server-static:altamont-previews/,
+  );
 });
