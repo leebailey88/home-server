@@ -53,8 +53,7 @@ async function checkUrl(label, rawCheck, init = {}) {
 
     if (!statusOk) {
       failures += 1;
-      const expected =
-        expectedStatuses.length > 0 ? expectedStatuses.join(', ') : 'any 2xx status';
+      const expected = expectedStatuses.length > 0 ? expectedStatuses.join(', ') : 'any 2xx status';
       const elapsedMs = Date.now() - startedAt;
       console.error(
         `[FAIL] ${label}: ${check.url} returned ${response.status} in ${elapsedMs}ms; expected ${expected}`,
@@ -64,9 +63,7 @@ async function checkUrl(label, rawCheck, init = {}) {
 
     if (expectedBodyContains.length > 0) {
       const body = await response.text();
-      const missing = expectedBodyContains.filter(
-        (expectedText) => !body.includes(expectedText),
-      );
+      const missing = expectedBodyContains.filter((expectedText) => !body.includes(expectedText));
 
       if (missing.length > 0) {
         failures += 1;
