@@ -76,11 +76,11 @@ sudo \
 
 Defaults are:
 
-| Setting | Default | Meaning |
-| --- | ---: | --- |
-| `HOME_SERVER_DOCKER_BUILD_CACHE_MAX_AGE` | `168h` | unused build cache retention |
-| `HOME_SERVER_DOCKER_STOPPED_CONTAINER_MAX_AGE` | `720h` | stopped container retention |
-| `HOME_SERVER_DOCKER_DANGLING_IMAGE_MAX_AGE` | `168h` | dangling image retention |
+| Setting                                            | Default | Meaning                     |
+| -------------------------------------------------- | ------: | --------------------------- |
+| `HOME_SERVER_DOCKER_BUILD_CACHE_MAX_AGE`           |  `168h` | unused build cache retention |
+| `HOME_SERVER_DOCKER_STOPPED_CONTAINER_MAX_AGE`     |  `720h` | stopped container retention  |
+| `HOME_SERVER_DOCKER_DANGLING_IMAGE_MAX_AGE`        |  `168h` | dangling image retention     |
 
 ## Inspect a run
 
