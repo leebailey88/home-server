@@ -78,7 +78,7 @@ It checks:
 - `cron.service` or `crond.service`, unless disabled
 - host-level `cronJobs` from `config/sites.yaml`
 - per-site `cronJobs` from `config/sites.yaml`
-- log-file existence and freshness
+- log/status-file existence and freshness
 - configured success markers
 - high-signal error patterns such as `ERROR`, `Error:`, `FAILED`, `Exception`,
   `Traceback`, `exited with error code`, `command not found`, and
@@ -87,10 +87,10 @@ It checks:
 Job failures are sent as warning-level `home-server-jobs` alerts, not critical
 `home-server-gateway` alerts.
 
-### Run-state-aware log checks
+### Run-state-aware content checks
 
 For jobs with `successPatterns`, the checker compares the latest matching
-success with the latest matching error in the log tail:
+success with the latest matching error in the retained log tail:
 
 - newer success than error: healthy
 - newer error than success: failed
@@ -101,20 +101,60 @@ newer run has completed successfully.
 
 Jobs without `successPatterns` retain the conservative legacy behavior: any
 matching error in the retained log tail is treated as a current failure. Add a
-stable completion marker whenever a job has one.
+stable completion marker whenever a generic job has one.
 
-Example:
+Example content-aware job:
+
+```yaml
+cronJobs:
+  - key: community-bank-pilot-health-check
+    logPath: /var/log/community-bank-pilot-health-check.log
+    maxAgeMinutes: 5
+    successPatterns:
+      - Health check completed successfully
+```
+
+### Freshness-only checks for service-owned semantics
+
+A service that already owns a richer semantic readiness contract should not
+have that contract reinterpreted by the generic home-server log scanner.
+For such a job, configure a durable terminal status file, keep a bounded
+`maxAgeMinutes`, set `errorPatterns: false`, and omit `successPatterns`:
 
 ```yaml
 sites:
   - key: grizzly-bulls
     cronJobs:
       - key: runtime-data-refresh
-        logPath: /var/log/grizzly-bulls-runtime-data.log
+        logPath: /opt/grizzly-bulls/data/runtime-data-refresh.status
         maxAgeMinutes: 4500
-        successPatterns:
-          - Runtime data refresh complete
+        errorPatterns: false
 ```
+
+That combination intentionally means **freshness-only** to the generic job
+monitor:
+
+- missing status file => failure;
+- status file older than policy => failure;
+- current status file => healthy at the home-server mechanism layer, regardless
+  of whether its text says the latest execution succeeded or failed.
+
+For Grizzly Bulls specifically, `/api/readiness` plus
+`grizzly-bulls-monitor-runtime-readiness.sh` is the authoritative semantic
+runtime-data monitor. Grizzly understands whether individual market,
+billionaire, history, and indicator authorities are still fresh enough to
+serve. A recent aggregate execution failure can therefore be `degraded` but
+serviceable, while stale/missing required authority becomes `critical`.
+
+The generic home-server monitor still catches the independent condition it is
+best suited to detect: the runtime refresh mechanism/status file stopped
+advancing altogether. It must not emit a second Spidey warning merely because
+`runtime-data-refresh.status` contains `Runtime data refresh FAILED` when the
+service's own readiness policy says the product remains serviceable.
+
+Do not use freshness-only mode merely to silence an ordinary job failure. Use
+it only when another documented service-owned readiness monitor is explicitly
+the semantic authority.
 
 ## Site health check options
 
@@ -218,6 +258,8 @@ home-server-jobs-monitor.timer
 ```
 
 Re-run the installer after changing these unit templates or monitor cadence.
+A `config/sites.yaml`-only change is consumed directly by subsequent monitor
+runs as long as the installed environment points at that repository config.
 
 ## Validate manually
 
@@ -248,6 +290,17 @@ Timer status:
 sudo systemctl status home-server-gateway-monitor.timer --no-pager
 sudo systemctl status home-server-jobs-monitor.timer --no-pager
 ```
+
+For the Grizzly runtime authority split, a useful manual pair is:
+
+```bash
+HOME_SERVER_SKIP_CRON_DAEMON_CHECK=true node scripts/check-cron-health.mjs
+curl -i http://127.0.0.1:8080/api/readiness
+```
+
+The first command should care about the terminal status file's age, not its
+`status=failed` text. The second command owns the semantic healthy/degraded/
+critical decision.
 
 ## Alert state
 

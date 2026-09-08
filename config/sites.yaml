@@ -39,12 +39,13 @@ sites:
         expectedBodyContains: Grizzly Bulls
     cronJobs:
       - key: runtime-data-refresh
-        # The verbose cron log rotates daily. Monitor the durable terminal status
-        # file instead so log rotation cannot erase the latest completion marker.
+        # Grizzly Bulls owns semantic runtime-data health through its dedicated
+        # /api/readiness monitor. This generic host check verifies only that the
+        # durable terminal status file still advances; it must not reinterpret a
+        # serviceable `status=failed` run as a separate home-server job outage.
         logPath: /opt/grizzly-bulls/data/runtime-data-refresh.status
         maxAgeMinutes: 4500
-        successPatterns:
-          - Runtime data refresh complete
+        errorPatterns: false
     notes: Grizzly Bulls Next.js app, deployed by the grizzly-bulls repo.
 
   - key: parcelwing
