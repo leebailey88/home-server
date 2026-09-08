@@ -6,10 +6,10 @@ import { evaluateCronLogState } from '../scripts/lib/cron-log-state.mjs';
 
 test('Grizzly runtime terminal status is monitored for freshness only by home-server', () => {
   const config = YAML.parse(readFileSync('config/sites.yaml', 'utf8'));
-  const grizzly = config.sites.find(site => site.key === 'grizzly-bulls');
+  const grizzly = config.sites.find((site) => site.key === 'grizzly-bulls');
   assert.ok(grizzly, 'expected grizzly-bulls site config');
 
-  const runtimeJob = grizzly.cronJobs?.find(job => job.key === 'runtime-data-refresh');
+  const runtimeJob = grizzly.cronJobs?.find((job) => job.key === 'runtime-data-refresh');
   assert.ok(runtimeJob, 'expected runtime-data-refresh job monitor');
   assert.equal(runtimeJob.logPath, '/opt/grizzly-bulls/data/runtime-data-refresh.status');
   assert.equal(runtimeJob.errorPatterns, false);
