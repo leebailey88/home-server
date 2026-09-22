@@ -305,8 +305,8 @@ runs as long as the installed environment points at that repository config.
 Run the checks directly first:
 
 ```bash
-HOME_SERVER_ENV_FILE="$(pwd)/.env" bash scripts/monitor-gateway.sh
-HOME_SERVER_ENV_FILE="$(pwd)/.env" bash scripts/monitor-jobs.sh
+sudo HOME_SERVER_ENV_FILE="$(pwd)/.env" bash scripts/monitor-gateway.sh
+sudo HOME_SERVER_ENV_FILE="$(pwd)/.env" bash scripts/monitor-jobs.sh
 ```
 
 Then run them through systemd:
