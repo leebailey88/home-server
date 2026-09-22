@@ -74,6 +74,7 @@ sites:
         expectedBodyContains: '"code":"not_found"'
       - url: https://api.grizzlybulls.com/api/health
         expectedStatus: 404
+        expectedBodyContains: false
     notes: AIR6E dark public edge and public-host monitor. Grizzly Bulls owns application launch authority.
 
   - key: parcelwing
