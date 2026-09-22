@@ -25,8 +25,15 @@ function assertSafePath(value, label) {
 function assertSafeRequestPath(value, label, { prefix = false } = {}) {
   assertNoNginxControlChars(value, label);
 
-  if (!value.startsWith('/') || value.includes('?') || value.includes('#')) {
-    throw new Error(`${label} must be an absolute URL path without query or fragment. Received: ${value}`);
+  if (
+    !value.startsWith('/') ||
+    value.includes('//') ||
+    value.includes('?') ||
+    value.includes('#')
+  ) {
+    throw new Error(
+      `${label} must be an unambiguous absolute URL path without duplicate slashes, query, or fragment. Received: ${value}`,
+    );
   }
 
   if (prefix && (value === '/' || !value.endsWith('/'))) {
