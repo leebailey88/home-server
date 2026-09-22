@@ -74,6 +74,7 @@ test('AIR6E2 dark public monitor covers allowed API routes and one blocked app r
   assert.deepEqual(site.publicHealthChecks[3], {
     url: 'https://api.grizzlybulls.com/api/health',
     expectedStatus: 404,
+    expectedBodyContains: false,
   });
 });
 
