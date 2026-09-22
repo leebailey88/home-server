@@ -6,6 +6,8 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # shellcheck source=scripts/lib/common.sh
 source "${SCRIPT_DIR}/lib/common.sh"
 
+require_root
+
 ENV_FILE="${HOME_SERVER_ENV_FILE:-${REPO_ROOT}/.env}"
 HOSTNAME_VALUE="$(hostname -f 2> /dev/null || hostname)"
 
