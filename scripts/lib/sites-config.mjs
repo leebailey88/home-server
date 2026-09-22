@@ -447,9 +447,7 @@ export function validateSitesConfig(config) {
 
     if (site.kind === 'static') {
       if (site.pathProxy !== undefined || site.localCheckPath !== undefined) {
-        throw new Error(
-          `Static site ${site.key} cannot configure pathProxy or localCheckPath.`,
-        );
+        throw new Error(`Static site ${site.key} cannot configure pathProxy or localCheckPath.`);
       }
 
       if (!site.root) {

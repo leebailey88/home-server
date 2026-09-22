@@ -80,12 +80,7 @@ fs.chmodSync(releasesDir, 0o755);
 fs.mkdirSync(releaseDir, { mode: 0o755 });
 
 console.log(`[home-server] Deploying ${siteKey} from ${sourceDir} to ${releaseDir}`);
-run('rsync', [
-  '-a',
-  '--chmod=D755,F644',
-  `${sourceDir}/`,
-  `${releaseDir}/`,
-]);
+run('rsync', ['-a', '--chmod=D755,F644', `${sourceDir}/`, `${releaseDir}/`]);
 
 const metadata = {
   siteKey,

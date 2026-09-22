@@ -74,9 +74,7 @@ test('AIR6E1 tunnel rendering sends api.grizzlybulls.com only to local Nginx', (
 
     assert.equal(result.status, 0, result.stderr);
     const rendered = YAML.parse(fs.readFileSync(outputFile, 'utf8'));
-    const matches = rendered.ingress.filter(
-      (entry) => entry.hostname === 'api.grizzlybulls.com',
-    );
+    const matches = rendered.ingress.filter((entry) => entry.hostname === 'api.grizzlybulls.com');
 
     assert.deepEqual(matches, [
       {
