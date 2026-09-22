@@ -291,6 +291,13 @@ export function nginxListenToUrl(listen) {
   return `http://${host}:${port}`;
 }
 
+export function staticDeployRootForSite(site, defaults = {}) {
+  if (site.deployRoot) return site.deployRoot;
+
+  const staticRootBase = defaults.staticRootBase || '/opt/nuc-web/sites';
+  return path.join(staticRootBase, site.key);
+}
+
 export function validateSitesConfig(config) {
   const defaults = config.defaults || {};
   const cloudflared = config.cloudflared || {};
