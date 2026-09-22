@@ -74,10 +74,18 @@ const timestamp = new Date()
 const releaseName = `${timestamp}-${process.env.USER || 'deploy'}`;
 const releaseDir = path.join(releasesDir, releaseName);
 
-fs.mkdirSync(releaseDir, { recursive: true });
+fs.mkdirSync(releasesDir, { recursive: true, mode: 0o755 });
+fs.chmodSync(deployRoot, 0o755);
+fs.chmodSync(releasesDir, 0o755);
+fs.mkdirSync(releaseDir, { mode: 0o755 });
 
 console.log(`[home-server] Deploying ${siteKey} from ${sourceDir} to ${releaseDir}`);
-run('rsync', ['-a', `${sourceDir}/`, `${releaseDir}/`]);
+run('rsync', [
+  '-a',
+  '--chmod=D755,F644',
+  `${sourceDir}/`,
+  `${releaseDir}/`,
+]);
 
 const metadata = {
   siteKey,
