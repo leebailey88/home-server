@@ -92,6 +92,19 @@ sites:
     localCheckPath: /v1/openapi
     expectedStatus: 404
     expectedBodyContains: '"code":"not_found"'
+    publicHealthChecks:
+      - url: https://api.grizzlybulls.com/v1/openapi
+        expectedStatus: 404
+        expectedBodyContains: '"code":"not_found"'
+      - url: https://api.grizzlybulls.com/v1/aircraft/N100
+        expectedStatus: 404
+        expectedBodyContains: '"code":"not_found"'
+      - url: https://api.grizzlybulls.com/v1/aircraft/N100/history
+        expectedStatus: 404
+        expectedBodyContains: '"code":"not_found"'
+      - url: https://api.grizzlybulls.com/api/health
+        expectedStatus: 404
+        expectedBodyContains: false
 
   - key: example-static
     enabled: false
