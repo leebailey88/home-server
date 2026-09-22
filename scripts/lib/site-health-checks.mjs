@@ -11,7 +11,7 @@ export function localNginxRouteCheckForSite(site, nginxUrl) {
   }
 
   const fallbackCheck = {
-    url: nginxUrl,
+    url: `${nginxUrl}${site.localCheckPath || ''}`,
     expectedStatus: site.expectedStatus,
     expectedStatuses: site.expectedStatuses,
     expectedBodyContains: site.expectedBodyContains,
