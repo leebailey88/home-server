@@ -8,10 +8,17 @@ import { loadSitesConfig } from './lib/sites-config.mjs';
 const repoRoot = process.cwd();
 const outputDir = process.env.NGINX_OUTPUT_DIR || path.join(repoRoot, 'nginx', 'generated');
 const proxyTemplatePath = path.join(repoRoot, 'nginx', 'templates', 'site-proxy.conf.tmpl');
+const pathProxyTemplatePath = path.join(
+  repoRoot,
+  'nginx',
+  'templates',
+  'site-path-proxy.conf.tmpl',
+);
 const staticTemplatePath = path.join(repoRoot, 'nginx', 'templates', 'site-static.conf.tmpl');
 
 const { defaults, enabledSites, selectedConfigPath } = loadSitesConfig({ repoRoot });
 const proxyTemplate = fs.readFileSync(proxyTemplatePath, 'utf8');
+const pathProxyTemplate = fs.readFileSync(pathProxyTemplatePath, 'utf8');
 const staticTemplate = fs.readFileSync(staticTemplatePath, 'utf8');
 
 function render(template, values) {
@@ -44,7 +51,14 @@ for (const site of enabledSites) {
   };
 
   let rendered;
-  if (site.kind === 'proxy') {
+  if (site.kind === 'proxy' && site.pathProxy) {
+    rendered = render(pathProxyTemplate, {
+      ...common,
+      upstream: site.upstream.replace(/\/$/, ''),
+      publicPrefix: site.pathProxy.publicPrefix,
+      upstreamPrefix: site.pathProxy.upstreamPrefix,
+    });
+  } else if (site.kind === 'proxy') {
     rendered = render(proxyTemplate, { ...common, upstream: site.upstream });
   } else if (site.kind === 'static') {
     rendered = render(staticTemplate, {

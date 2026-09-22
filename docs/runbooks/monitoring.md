@@ -196,6 +196,36 @@ end-user content availability should also be monitored.
 Proxy sites without `healthBodyContains` keep their existing root-page
 `expectedBodyContains` behavior.
 
+### Restricted path proxies
+
+A proxy hostname may expose only one reviewed public prefix while rejecting every
+other path at Nginx:
+
+```yaml
+sites:
+  - key: example-api
+    kind: proxy
+    hostnames:
+      - api.example.com
+    upstream: http://127.0.0.1:8080
+    pathProxy:
+      publicPrefix: /v1/
+      upstreamPrefix: /api/v1/
+    localCheckPath: /v1/openapi
+    expectedStatus: 404
+```
+
+`publicPrefix` and `upstreamPrefix` must be non-root path prefixes ending in
+`/`. The generated Nginx server forwards only the configured public prefix and
+returns `404` for every other path on that hostname. `localCheckPath` lets the
+gateway monitor verify the allowed route instead of probing the intentionally
+blocked root path.
+
+For the Aircraft Intelligence API, the dark AIR6E edge intentionally expects
+`/v1/openapi` to return the application's bounded `404 not_found` while the
+Grizzly Bulls aircraft launch gate remains off. Recurring public HTTPS behavior
+is a separate service launch-monitor contract.
+
 ## Environment
 
 Create a local `.env` from the example and keep the NUC paths accurate:

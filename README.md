@@ -144,7 +144,7 @@ nano .env
 sudo HOME_SERVER_ENV_FILE="$(pwd)/.env" bash scripts/install-monitor-service.sh
 ```
 
-`config/sites.yaml` supports deeper monitor assertions such as `expectedStatus`, `expectedBodyContains`, `healthBodyContains`, and `publicHealthChecks`. See `docs/runbooks/monitoring.md` for the Grizzly Bulls setup and cutover checklist.
+`config/sites.yaml` supports deeper monitor assertions such as `expectedStatus`, `expectedBodyContains`, `healthBodyContains`, and `publicHealthChecks`. Proxy sites may also set `pathProxy.publicPrefix` plus `pathProxy.upstreamPrefix` to expose one narrow public path namespace while returning Nginx 404 for every other path on that hostname. `localCheckPath` selects the route used by the local Host-header health check. See `docs/runbooks/monitoring.md` for the Grizzly Bulls setup and cutover checklist.
 
 ## Initial production convention
 
@@ -169,6 +169,7 @@ Keep public HTTP ports closed. Nginx should listen on localhost and receive traf
 - Keep SSH Cloudflare Access separate from web hostnames.
 - Keep automated Docker storage cleanup conservative: never prune volumes or tagged rollback images as routine maintenance.
 - Model standalone applications under a wildcard namespace as exact site entries. For example, `ingredients.altamontiq.com` is a separate app from the Altamont IQ `*.altamontiq.com` tenant wildcard.
+- Use `pathProxy` when a public API hostname must expose only a reviewed prefix. Do not use an unrestricted whole-host proxy merely because the upstream application also owns the desired route.
 - Deploy and verify a new loopback upstream before installing an enabled gateway route, because the gateway monitor checks every enabled site's upstream immediately.
 - Stage Grizzly Bulls at `nuc-grizzly.grizzlybulls.com` before moving production DNS.
 - Keep the existing production droplet available until NUC hosting has run cleanly for several days.
