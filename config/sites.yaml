@@ -48,6 +48,22 @@ sites:
         errorPatterns: false
     notes: Grizzly Bulls Next.js app, deployed by the grizzly-bulls repo.
 
+  # AIR6E exposes only the canonical public API prefix. All other paths on this
+  # hostname terminate at Nginx with 404 and never reach the Next.js app.
+  - key: grizzly-bulls-aircraft-api
+    enabled: true
+    kind: proxy
+    hostnames:
+      - api.grizzlybulls.com
+    upstream: http://127.0.0.1:8080
+    pathProxy:
+      publicPrefix: /v1/
+      upstreamPrefix: /api/v1/
+    localCheckPath: /v1/openapi
+    expectedStatus: 404
+    expectedBodyContains: '"code":"not_found"'
+    notes: AIR6E dark public edge. Grizzly Bulls owns application launch authority.
+
   - key: parcelwing
     enabled: true
     kind: proxy
