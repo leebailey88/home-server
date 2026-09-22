@@ -47,6 +47,25 @@ test('local proxy route keeps root page assertion without a health identity', ()
   });
 });
 
+test('local proxy route can target an explicit restricted-path check', () => {
+  const check = localNginxRouteCheckForSite(
+    {
+      kind: 'proxy',
+      localCheckPath: '/v1/openapi',
+      expectedStatus: 404,
+      expectedBodyContains: '"code":"not_found"',
+    },
+    'http://127.0.0.1:80',
+  );
+
+  assert.deepEqual(check, {
+    url: 'http://127.0.0.1:80/v1/openapi',
+    expectedStatus: 404,
+    expectedStatuses: undefined,
+    expectedBodyContains: '"code":"not_found"',
+  });
+});
+
 test('static site local route uses the generated virtual-host sentinel', () => {
   const check = localNginxRouteCheckForSite(
     {
