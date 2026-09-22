@@ -222,9 +222,18 @@ gateway monitor verify the allowed route instead of probing the intentionally
 blocked root path.
 
 For the Aircraft Intelligence API, the dark AIR6E edge intentionally expects
-`/v1/openapi` to return the application's bounded `404 not_found` while the
-Grizzly Bulls aircraft launch gate remains off. Recurring public HTTPS behavior
-is a separate service launch-monitor contract.
+`/v1/openapi`, a current lookup, and a history lookup to return the
+application's bounded `404 not_found` while the Grizzly Bulls aircraft launch
+gate remains off. It also checks `/api/health` for a bare `404` to prove the
+restricted API hostname still blocks unrelated application routes.
+
+These checks run through both the NUC gateway monitor and the external uptime
+monitor when that monitor has the current repository checkout. They therefore
+exercise real public DNS, TLS, Cloudflare, tunnel, Nginx, and application-gate
+behavior without transporting an API key while the API is dark. After the
+application launch gate is deliberately enabled, the same inventory must be
+updated to the live AIR expectations rather than leaving dark `404` checks in
+place.
 
 ## Environment
 
