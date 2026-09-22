@@ -22,6 +22,35 @@ function assertSafePath(value, label) {
   }
 }
 
+function assertSafeRequestPath(value, label, { prefix = false } = {}) {
+  assertNoNginxControlChars(value, label);
+
+  if (!value.startsWith('/') || value.includes('?') || value.includes('#')) {
+    throw new Error(`${label} must be an absolute URL path without query or fragment. Received: ${value}`);
+  }
+
+  if (prefix && (value === '/' || !value.endsWith('/'))) {
+    throw new Error(`${label} must be a non-root path prefix ending in /. Received: ${value}`);
+  }
+
+  const segments = value.split('/').filter(Boolean);
+  for (const segment of segments) {
+    if (segment === '.' || segment === '..' || !/^[A-Za-z0-9._~-]+$/.test(segment)) {
+      throw new Error(`${label} contains an unsafe path segment: ${segment}`);
+    }
+  }
+}
+
+function assertPathProxy(value, label) {
+  if (value === undefined) return;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`${label} must be an object when configured.`);
+  }
+
+  assertSafeRequestPath(value.publicPrefix, `${label}.publicPrefix`, { prefix: true });
+  assertSafeRequestPath(value.upstreamPrefix, `${label}.upstreamPrefix`, { prefix: true });
+}
+
 function assertSafeKey(key) {
   if (typeof key !== 'string' || !/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(key)) {
     throw new Error(`Invalid site key "${key}". Use lowercase letters, numbers, and hyphens.`);
@@ -393,9 +422,29 @@ export function validateSitesConfig(config) {
       assertSafeUrl(site.upstream, `${site.key}.upstream`, {
         requireLoopback: site.allowNonLoopbackUpstreams !== true,
       });
+      assertPathProxy(site.pathProxy, `${site.key}.pathProxy`);
+
+      if (site.pathProxy) {
+        const upstreamUrl = new URL(site.upstream);
+        if (upstreamUrl.pathname !== '/' || upstreamUrl.search || upstreamUrl.hash) {
+          throw new Error(
+            `${site.key}.upstream must be an origin-only URL when pathProxy is configured.`,
+          );
+        }
+      }
+
+      if (site.localCheckPath !== undefined) {
+        assertSafeRequestPath(site.localCheckPath, `${site.key}.localCheckPath`);
+      }
     }
 
     if (site.kind === 'static') {
+      if (site.pathProxy !== undefined || site.localCheckPath !== undefined) {
+        throw new Error(
+          `Static site ${site.key} cannot configure pathProxy or localCheckPath.`,
+        );
+      }
+
       if (!site.root) {
         throw new Error(`Static site ${site.key} must define root.`);
       }
