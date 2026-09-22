@@ -78,6 +78,21 @@ sites:
           - completed
     notes: Grizzly Bulls Next.js app, deployed by the grizzly-bulls repo.
 
+  # Optional restricted API hostname. Only /v1/* is forwarded; every other
+  # request on api.grizzlybulls.com is rejected by Nginx before the app.
+  - key: grizzly-bulls-aircraft-api
+    enabled: false
+    kind: proxy
+    hostnames:
+      - api.grizzlybulls.com
+    upstream: http://127.0.0.1:8080
+    pathProxy:
+      publicPrefix: /v1/
+      upstreamPrefix: /api/v1/
+    localCheckPath: /v1/openapi
+    expectedStatus: 404
+    expectedBodyContains: '"code":"not_found"'
+
   - key: example-static
     enabled: false
     kind: static
