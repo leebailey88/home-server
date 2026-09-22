@@ -4,6 +4,38 @@ The NUC gateway monitor checks local upstreams, local Nginx routes, public route
 
 Run the external uptime monitor from a separate host such as a small DigitalOcean droplet. It reads `config/sites.yaml` and checks enabled `publicHealthChecks` for all enabled sites.
 
+## Production placement
+
+The current production external monitor runs on the DigitalOcean host reached as:
+
+```text
+ssh root@mail2.parcelwing.com
+```
+
+Its `home-server` checkout is:
+
+```text
+/root/projects/home-server
+```
+
+and the active systemd authority is:
+
+```text
+home-server-external-uptime-monitor.service
+home-server-external-uptime-monitor.timer
+```
+
+Keep that checkout on current `main` whenever `config/sites.yaml` public-monitor
+inventory changes. The NUC gateway monitor remains a separate origin-side
+vantage; `mail2` is the independent Internet-side vantage that can detect NUC
+power, connectivity, DNS, Cloudflare Tunnel, and origin failure.
+
+For the Aircraft Intelligence API, `leebailey88/home-server` owns the
+`api.grizzlybulls.com` Cloudflare/Nginx edge and its public monitor inventory.
+Grizzly Bulls application launch state remains owned by the
+`leebailey88/grizzly-bulls` repository; do not move launch-gate authority into
+this monitor configuration.
+
 ## What it checks
 
 The external monitor checks only public URLs from `publicHealthChecks`, including expected HTTP status and optional `expectedBodyContains`.
