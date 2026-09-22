@@ -50,6 +50,7 @@ test('AIR6E1 registers an exact dark aircraft API hostname with one public path 
     {
       url: 'https://api.grizzlybulls.com/api/health',
       expectedStatus: 404,
+      expectedBodyContains: false,
     },
   ]);
 });
