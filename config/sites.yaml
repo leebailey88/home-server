@@ -102,6 +102,20 @@ sites:
     index: index.html
     notes: Customer-shareable Altamont Advisory interactive wireframes and prototypes.
 
+  - key: altamont-evergreene
+    enabled: true
+    kind: static
+    hostnames:
+      - evergreene.altamontiq.com
+    deployRoot: /opt/nuc-web/sites/altamont-evergreene
+    root: /opt/nuc-web/sites/altamont-evergreene/current
+    index: index.html
+    publicHealthChecks:
+      - url: https://evergreene.altamontiq.com/
+        expectedStatus: 200
+        expectedBodyContains: EverGreene Project Hub
+    notes: Customer-shareable EverGreene Manufacturing project hub and interactive demos.
+
   # Exact application carve-outs must remain separate from the Altamont IQ
   # wildcard tenant route below. Nginx selects this exact server_name ahead of
   # *.altamontiq.com; keeping it earlier also makes the tunnel ingress intent clear.
