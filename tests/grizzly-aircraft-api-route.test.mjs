@@ -16,7 +16,7 @@ function siteByKey(key) {
   return config.sites.find((site) => site.key === key);
 }
 
-test('AIR6E1 registers an exact dark aircraft API hostname with one public path prefix', () => {
+test('AIR6E4 keeps the exact aircraft API hostname narrow while expecting the live OpenAPI contract', () => {
   const site = siteByKey('grizzly-bulls-aircraft-api');
 
   assert.ok(site);
@@ -29,23 +29,23 @@ test('AIR6E1 registers an exact dark aircraft API hostname with one public path 
     upstreamPrefix: '/api/v1/',
   });
   assert.equal(site.localCheckPath, '/v1/openapi');
-  assert.equal(site.expectedStatus, 404);
-  assert.equal(site.expectedBodyContains, '"code":"not_found"');
+  assert.equal(site.expectedStatus, 200);
+  assert.equal(site.expectedBodyContains, '"openapi":"3.1.0"');
   assert.deepEqual(site.publicHealthChecks, [
     {
       url: 'https://api.grizzlybulls.com/v1/openapi',
-      expectedStatus: 404,
-      expectedBodyContains: '"code":"not_found"',
+      expectedStatus: 200,
+      expectedBodyContains: '"openapi":"3.1.0"',
     },
     {
       url: 'https://api.grizzlybulls.com/v1/aircraft/N100',
-      expectedStatus: 404,
-      expectedBodyContains: '"code":"not_found"',
+      expectedStatus: 401,
+      expectedBodyContains: '"code":"unauthenticated"',
     },
     {
       url: 'https://api.grizzlybulls.com/v1/aircraft/N100/history',
-      expectedStatus: 404,
-      expectedBodyContains: '"code":"not_found"',
+      expectedStatus: 401,
+      expectedBodyContains: '"code":"unauthenticated"',
     },
     {
       url: 'https://api.grizzlybulls.com/api/health',
@@ -55,7 +55,7 @@ test('AIR6E1 registers an exact dark aircraft API hostname with one public path 
   ]);
 });
 
-test('AIR6E2 dark public monitor covers allowed API routes and one blocked app route', () => {
+test('AIR6E4 secret-free public monitor proves the live protocol contract and one blocked app route', () => {
   const site = siteByKey('grizzly-bulls-aircraft-api');
   const urls = site.publicHealthChecks.map((check) => check.url);
 
@@ -66,16 +66,23 @@ test('AIR6E2 dark public monitor covers allowed API routes and one blocked app r
     'https://api.grizzlybulls.com/api/health',
   ]);
 
-  for (const check of site.publicHealthChecks.slice(0, 3)) {
-    assert.equal(check.expectedStatus, 404);
-    assert.equal(check.expectedBodyContains, '"code":"not_found"');
+  assert.deepEqual(site.publicHealthChecks[0], {
+    url: 'https://api.grizzlybulls.com/v1/openapi',
+    expectedStatus: 200,
+    expectedBodyContains: '"openapi":"3.1.0"',
+  });
+  for (const check of site.publicHealthChecks.slice(1, 3)) {
+    assert.equal(check.expectedStatus, 401);
+    assert.equal(check.expectedBodyContains, '"code":"unauthenticated"');
   }
-
   assert.deepEqual(site.publicHealthChecks[3], {
     url: 'https://api.grizzlybulls.com/api/health',
     expectedStatus: 404,
     expectedBodyContains: false,
   });
+
+  const serialized = JSON.stringify(site.publicHealthChecks);
+  assert.doesNotMatch(serialized, /Authorization|Bearer|api.?key/i);
 });
 
 test('AIR6E1 renders only /v1/* to the Grizzly Bulls internal API namespace', () => {
