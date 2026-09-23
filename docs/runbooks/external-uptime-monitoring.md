@@ -36,6 +36,11 @@ Grizzly Bulls application launch state remains owned by the
 `leebailey88/grizzly-bulls` repository; do not move launch-gate authority into
 this monitor configuration.
 
+During AIR6E4 free beta, the external monitor remains secret-free. It proves
+OpenAPI `200`, unauthenticated current/history `401`, and blocked
+`/api/health` `404`. The root-only synthetic API key stays on the NUC under
+Grizzly Bulls ownership and must never be copied to `mail2`.
+
 ## What it checks
 
 The external monitor checks only public URLs from `publicHealthChecks`, including expected HTTP status and optional `expectedBodyContains`.
