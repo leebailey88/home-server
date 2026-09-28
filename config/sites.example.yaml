@@ -106,6 +106,26 @@ sites:
         expectedStatus: 404
         expectedBodyContains: false
 
+  # Optional AIR13F-style hosted reference app. Keep the app on loopback and
+  # trust Cloudflare's canonical client IP only when this hostname is actually
+  # published through the local Cloudflare Tunnel.
+  - key: grizzly-bulls-aircraft-demo
+    enabled: false
+    kind: proxy
+    hostnames:
+      - aircraft-demo.grizzlybulls.com
+    upstream: http://127.0.0.1:3091
+    trustCloudflareClientIp: true
+    healthUrl: http://127.0.0.1:3091/api/health
+    healthBodyContains: '"hostedDemo":true'
+    expectedStatus: 200
+    expectedBodyContains: '"hostedDemo":true'
+    publicHealthChecks:
+      - url: https://aircraft-demo.grizzlybulls.com/api/health
+        expectedStatus: 200
+        expectedBodyContains: '"hostedDemo":true'
+    notes: Example hosted Aircraft Registry Explorer demo route.
+
   - key: example-static
     enabled: false
     kind: static

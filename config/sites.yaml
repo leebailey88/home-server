@@ -77,6 +77,27 @@ sites:
         expectedBodyContains: false
     notes: AIR6E4 live free-beta public edge and secret-free protocol monitor. Grizzly Bulls owns application launch and authenticated canary authority.
 
+  # AIR13F hosted reference app. The app remains loopback-only; Cloudflare
+  # Tunnel terminates at local Nginx. Preserve Cloudflare's canonical client
+  # address so the hosted app's per-client abuse limiter does not collapse all
+  # public visitors into the tunnel's localhost peer.
+  - key: grizzly-bulls-aircraft-demo
+    enabled: true
+    kind: proxy
+    hostnames:
+      - aircraft-demo.grizzlybulls.com
+    upstream: http://127.0.0.1:3091
+    trustCloudflareClientIp: true
+    healthUrl: http://127.0.0.1:3091/api/health
+    healthBodyContains: '"hostedDemo":true'
+    expectedStatus: 200
+    expectedBodyContains: '"hostedDemo":true'
+    publicHealthChecks:
+      - url: https://aircraft-demo.grizzlybulls.com/api/health
+        expectedStatus: 200
+        expectedBodyContains: '"hostedDemo":true'
+    notes: AIR13F public Aircraft Registry Explorer demo; application deployment remains owned by grizzly-bulls.
+
   - key: parcelwing
     enabled: true
     kind: proxy

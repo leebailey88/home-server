@@ -41,6 +41,15 @@ OpenAPI `200`, unauthenticated current/history `401`, and blocked
 `/api/health` `404`. The root-only synthetic API key stays on the NUC under
 Grizzly Bulls ownership and must never be copied to `mail2`.
 
+AIR13F adds the separately hosted `aircraft-demo.grizzlybulls.com` reference
+application on NUC loopback port `3091`. Its external monitor remains
+secret-free and checks only `/api/health` for `"hostedDemo":true`; the demo
+application itself owns the server-side Aircraft API credential. The Nginx
+route opts into `trustCloudflareClientIp` so it overwrites client-address
+headers from Cloudflare's canonical `CF-Connecting-IP` value before forwarding
+to the demo. This preserves the demo's per-client abuse limiter instead of
+treating the local tunnel peer as every visitor.
+
 ## What it checks
 
 The external monitor checks only public URLs from `publicHealthChecks`, including expected HTTP status and optional `expectedBodyContains`.
