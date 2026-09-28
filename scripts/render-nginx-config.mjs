@@ -30,6 +30,20 @@ function render(template, values) {
   });
 }
 
+function clientIpHeadersForSite(site) {
+  if (site.trustCloudflareClientIp === true) {
+    return [
+      'proxy_set_header X-Real-IP $http_cf_connecting_ip;',
+      'proxy_set_header X-Forwarded-For $http_cf_connecting_ip;',
+    ].join('\n    ');
+  }
+
+  return [
+    'proxy_set_header X-Real-IP $remote_addr;',
+    'proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;',
+  ].join('\n    ');
+}
+
 const outputParentDir = path.dirname(outputDir);
 const outputBaseName = path.basename(outputDir);
 
@@ -57,9 +71,14 @@ for (const site of enabledSites) {
       upstream: site.upstream.replace(/\/$/, ''),
       publicPrefix: site.pathProxy.publicPrefix,
       upstreamPrefix: site.pathProxy.upstreamPrefix,
+      clientIpHeaders: clientIpHeadersForSite(site),
     });
   } else if (site.kind === 'proxy') {
-    rendered = render(proxyTemplate, { ...common, upstream: site.upstream });
+    rendered = render(proxyTemplate, {
+      ...common,
+      upstream: site.upstream,
+      clientIpHeaders: clientIpHeadersForSite(site),
+    });
   } else if (site.kind === 'static') {
     rendered = render(staticTemplate, {
       ...common,

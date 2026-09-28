@@ -421,6 +421,17 @@ export function validateSitesConfig(config) {
       enabledHostnames.set(normalizedHostname, site.key);
     }
 
+    if (
+      site.trustCloudflareClientIp !== undefined &&
+      typeof site.trustCloudflareClientIp !== 'boolean'
+    ) {
+      throw new Error(`${site.key}.trustCloudflareClientIp must be a boolean when configured.`);
+    }
+
+    if (site.kind !== 'proxy' && site.trustCloudflareClientIp !== undefined) {
+      throw new Error(`${site.key}.trustCloudflareClientIp is supported only for proxy sites.`);
+    }
+
     if (site.kind === 'proxy') {
       if (!site.upstream) {
         throw new Error(`Proxy site ${site.key} must define upstream.`);
