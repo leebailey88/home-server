@@ -48,10 +48,7 @@ test('AIR13F overwrites spoofable forwarded addresses with Cloudflare canonical 
 
     assert.equal(result.status, 0, result.stderr);
 
-    const demo = fs.readFileSync(
-      path.join(outputDir, 'grizzly-bulls-aircraft-demo.conf'),
-      'utf8',
-    );
+    const demo = fs.readFileSync(path.join(outputDir, 'grizzly-bulls-aircraft-demo.conf'), 'utf8');
     assert.match(demo, /server_name aircraft-demo\.grizzlybulls\.com;/);
     assert.match(demo, /proxy_pass http:\/\/127\.0\.0\.1:3091;/);
     assert.match(demo, /proxy_set_header X-Real-IP \$http_cf_connecting_ip;/);
@@ -113,10 +110,7 @@ test('trusted Cloudflare client IP mode is explicit and proxy-only', () => {
 
   const nonBoolean = structuredClone(base);
   nonBoolean.sites[0].trustCloudflareClientIp = 'true';
-  assert.throws(
-    () => validateSitesConfig(nonBoolean),
-    /trustCloudflareClientIp must be a boolean/,
-  );
+  assert.throws(() => validateSitesConfig(nonBoolean), /trustCloudflareClientIp must be a boolean/);
 
   const staticCandidate = structuredClone(base);
   staticCandidate.sites[0].kind = 'static';
