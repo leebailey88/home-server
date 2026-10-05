@@ -126,6 +126,26 @@ sites:
         expectedBodyContains: '"hostedDemo":true'
     notes: Example hosted Aircraft Registry Explorer demo route.
 
+  # Optional SEC7D5 hosted reference app. As with AIR13F, keep the application
+  # loopback-only and propagate Cloudflare's canonical client address so the
+  # reference app's per-client limiter sees the public visitor rather than Nginx.
+  - key: grizzly-bulls-sec-demo
+    enabled: false
+    kind: proxy
+    hostnames:
+      - sec-demo.grizzlybulls.com
+    upstream: http://127.0.0.1:3092
+    trustCloudflareClientIp: true
+    healthUrl: http://127.0.0.1:3092/api/health
+    healthBodyContains: '"mode":"hosted-demo"'
+    expectedStatus: 200
+    expectedBodyContains: '"service":"sec-data-explorer"'
+    publicHealthChecks:
+      - url: https://sec-demo.grizzlybulls.com/api/health
+        expectedStatus: 200
+        expectedBodyContains: '"mode":"hosted-demo"'
+    notes: Example hosted SEC Data Explorer demo route.
+
   - key: example-static
     enabled: false
     kind: static
