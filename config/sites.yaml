@@ -98,6 +98,27 @@ sites:
         expectedBodyContains: '"hostedDemo":true'
     notes: AIR13F public Aircraft Registry Explorer demo; application deployment remains owned by grizzly-bulls.
 
+  # SEC7D6 hosted reference app. Keep the Next.js app loopback-only behind the
+  # existing Cloudflare Tunnel and local Nginx edge. Preserve Cloudflare's
+  # canonical client address so the demo's per-client rate limiter remains
+  # meaningful for public visitors.
+  - key: grizzly-bulls-sec-demo
+    enabled: true
+    kind: proxy
+    hostnames:
+      - sec-demo.grizzlybulls.com
+    upstream: http://127.0.0.1:3092
+    trustCloudflareClientIp: true
+    healthUrl: http://127.0.0.1:3092/api/health
+    healthBodyContains: '"mode":"hosted-demo"'
+    expectedStatus: 200
+    expectedBodyContains: '"mode":"hosted-demo"'
+    publicHealthChecks:
+      - url: https://sec-demo.grizzlybulls.com/api/health
+        expectedStatus: 200
+        expectedBodyContains: '"mode":"hosted-demo"'
+    notes: SEC7D6 public SEC Data Explorer demo; application deployment remains owned by grizzly-bulls.
+
   - key: parcelwing
     enabled: true
     kind: proxy
