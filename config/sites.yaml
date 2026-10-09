@@ -163,6 +163,8 @@ sites:
         maxAgeMinutes: 1500
     notes: Parcel Wing Next.js app, deployed by the parcelwing repo.
 
+  # Heartbeat is enabled before storefront cutover so the free Supabase project
+  # stays active without introducing premature launch-health failures.
   - key: baby-bobaloo
     enabled: true
     kind: proxy
@@ -170,21 +172,11 @@ sites:
       - babybobaloo.com
       - www.babybobaloo.com
     upstream: http://127.0.0.1:8081
-    healthUrl: http://127.0.0.1:8081/api/health
-    healthBodyContains: '"service":"baby-bobaloo"'
     supabaseHeartbeat:
       enabled: true
       urlEnv: BABY_BOBALOO_SUPABASE_URL
       serviceRoleKeyEnv: BABY_BOBALOO_SUPABASE_SERVICE_ROLE_KEY
-    expectedStatus: 200
-    publicHealthChecks:
-      - url: https://babybobaloo.com/api/health
-        expectedStatus: 200
-        expectedBodyContains: '"service":"baby-bobaloo"'
-      - url: https://www.babybobaloo.com/
-        expectedStatus: 200
-        expectedBodyContains: Baby Bobaloo
-    notes: Baby Bobaloo Next.js storefront, deployed by the baby-bobaloo repo.
+    notes: Baby Bobaloo storefront. Add local/public health checks when the application is deployed and ready for gateway cutover.
 
   - key: altamont-previews
     enabled: true
