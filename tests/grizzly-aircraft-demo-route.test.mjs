@@ -27,6 +27,8 @@ test('AIR13F publishes the hosted Aircraft Registry Explorer only through loopba
   assert.equal(site.trustCloudflareClientIp, true);
   assert.equal(site.healthUrl, 'http://127.0.0.1:3091/api/health');
   assert.equal(site.healthBodyContains, '"hostedDemo":true');
+  assert.equal(site.expectedStatus, 200);
+  assert.equal(site.expectedBodyContains, '"hostedDemo":true');
   assert.deepEqual(site.publicHealthChecks, [
     {
       url: 'https://aircraft-demo.grizzlybulls.com/api/health',
