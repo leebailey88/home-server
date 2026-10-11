@@ -28,6 +28,7 @@ Nginx on the NUC
   ↓
 localhost-bound apps and static roots
     - grizzly-bulls          127.0.0.1:8080
+    - baby-bobaloo           127.0.0.1:8081
     - altamont-iq            127.0.0.1:8082
     - community-bank-pilot   127.0.0.1:8083
     - altamont-ingredients   127.0.0.1:8084
@@ -153,7 +154,7 @@ Reserve ports like this unless there is a strong reason to change them:
 |  Port | Service                                        |
 | ----: | ---------------------------------------------- |
 |  8080 | Grizzly Bulls                                  |
-|  8081 | Reserved / future app                          |
+|  8081 | Baby Bobaloo                                   |
 |  8082 | Altamont IQ                                    |
 |  8083 | Community Bank Pilot                           |
 |  8084 | Altamont Ingredients                           |
