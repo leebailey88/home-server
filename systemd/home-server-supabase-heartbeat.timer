@@ -3,7 +3,7 @@ Description=Run Home Server Supabase heartbeat periodically
 
 [Timer]
 OnBootSec={{ON_BOOT_SEC}}
-OnUnitActiveSec={{ON_UNIT_ACTIVE_SEC}}
+OnCalendar={{ON_CALENDAR}}
 AccuracySec=30m
 RandomizedDelaySec=30m
 Persistent=true

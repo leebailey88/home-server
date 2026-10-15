@@ -12,3 +12,8 @@ load_env_file "${ENV_FILE}"
 
 HOME_SERVER_CONFIG="${HOME_SERVER_CONFIG:-${REPO_ROOT}/config/sites.yaml}" \
   node "${SCRIPT_DIR}/supabase-heartbeat.mjs"
+
+if [[ -n "${HOME_SERVER_STATE_DIR:-}" ]]; then
+  install -d -m 0755 "${HOME_SERVER_STATE_DIR}"
+  date -u +"%Y-%m-%dT%H:%M:%SZ" > "${HOME_SERVER_STATE_DIR}/supabase-heartbeat.last-success"
+fi

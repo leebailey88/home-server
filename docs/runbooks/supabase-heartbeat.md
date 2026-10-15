@@ -83,11 +83,16 @@ From the production checkout, run:
 sudo bash scripts/install-supabase-heartbeat-service.sh
 ```
 
-The production default is every eight hours. An explicit override remains
-available:
+The production schedule runs at midnight, 08:00, and 16:00 in the NUC's local
+timezone, with up to 30 minutes of systemd jitter. It also keeps a five-minute
+post-boot trigger. The calendar schedule is `Persistent=true`, so a calendar
+run missed while the timer is inactive is caught up when the timer becomes
+active again.
+
+An explicit calendar override remains available:
 
 ```bash
-sudo HOME_SERVER_SUPABASE_HEARTBEAT_INTERVAL=12h \
+sudo HOME_SERVER_SUPABASE_HEARTBEAT_CALENDAR='*-*-* 01,09,17:00:00' \
   bash scripts/install-supabase-heartbeat-service.sh
 ```
 
@@ -98,9 +103,12 @@ the installer:
 
 - renders the service and timer into a temporary directory
 - installs the base units
-- installs persistent service and timer drop-ins for the env path and cadence
+- installs persistent service and timer drop-ins for the env path and calendar
 - runs the installed service and fails if any heartbeat fails
-- restarts the timer and prints its next scheduled run
+- records `/var/lib/home-server/supabase-heartbeat.last-success`
+- restarts the timer and requires it to be both enabled and active
+- fails closed if systemd reports no future timer activation
+- prints the next scheduled run
 
 The generated drop-ins are:
 
@@ -115,10 +123,22 @@ The generated drop-ins are:
 systemctl status home-server-supabase-heartbeat.timer --no-pager
 systemctl list-timers home-server-supabase-heartbeat.timer --all
 journalctl -u home-server-supabase-heartbeat.service -o cat -n 100
+cat /var/lib/home-server/supabase-heartbeat.last-success
 ```
 
 A oneshot service is normally `inactive (dead)` between runs. The timer should
-be both `enabled` and `active`.
+be both `enabled` and `active`, and `systemctl list-timers` must show an actual
+future `NEXT` timestamp rather than `-`.
+
+The background-jobs monitor also checks this scheduler on every monitor pass. It
+fails when the timer is disabled, inactive, has no future activation, lacks the
+success marker, or has not completed a successful heartbeat within 24 hours.
+That failure follows the normal jobs-monitor Discord/Captain Hook alert and
+recovery path. Override the freshness threshold only when necessary:
+
+```text
+HOME_SERVER_SUPABASE_HEARTBEAT_MAX_AGE_SECONDS=86400
+```
 
 ## Disaster recovery
 
@@ -137,9 +157,9 @@ sudo bash scripts/install-supabase-heartbeat-service.sh
 ```
 
 The installer derives the checkout path, defaults to that checkout's `.env`,
-uses the eight-hour production cadence, recreates the protective drop-ins, and
-proves all configured heartbeats before completing. Secrets must still be
-restored separately because they are intentionally excluded from Git.
+uses the three-times-daily persistent calendar, recreates the protective
+drop-ins, and proves all configured heartbeats before completing. Secrets must
+still be restored separately because they are intentionally excluded from Git.
 
 ## Troubleshooting
 
@@ -152,3 +172,7 @@ restored separately because they are intentionally excluded from Git.
 - `HTTP 404` usually means the heartbeat table does not exist or the table name
   in YAML is wrong.
 - `HTTP 401/403` usually means the service role key is wrong or missing.
+- `NEXT -` from `systemctl list-timers` is unhealthy even when the timer says
+  `enabled` and `active`; reinstall the timer and inspect the service journal.
+- A stale or missing `supabase-heartbeat.last-success` marker means the jobs
+  monitor cannot prove recent successful database activity.

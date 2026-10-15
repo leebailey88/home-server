@@ -8,4 +8,6 @@ source "${SCRIPT_DIR}/lib/common.sh"
 log "Checking cron daemon, cron logs, and configured background jobs..."
 node "${SCRIPT_DIR}/check-cron-health.mjs"
 
+bash "${SCRIPT_DIR}/check-supabase-heartbeat-health.sh"
+
 log "Background job health check complete."
