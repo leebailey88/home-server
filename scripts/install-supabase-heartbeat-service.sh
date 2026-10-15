@@ -11,7 +11,7 @@ require_root
 ENV_FILE="${HOME_SERVER_ENV_FILE:-${REPO_ROOT}/.env}"
 STATE_DIR="${HOME_SERVER_STATE_DIR:-/var/lib/home-server}"
 ON_BOOT_SEC="${HOME_SERVER_SUPABASE_HEARTBEAT_ON_BOOT_SEC:-5min}"
-ON_UNIT_ACTIVE_SEC="${HOME_SERVER_SUPABASE_HEARTBEAT_INTERVAL:-8h}"
+ON_CALENDAR="${HOME_SERVER_SUPABASE_HEARTBEAT_CALENDAR:-*-*-* 00,08,16:00:00}"
 SYSTEMD_DIR="${SYSTEMD_DIR:-/etc/systemd/system}"
 SERVICE_NAME="home-server-supabase-heartbeat.service"
 TIMER_NAME="home-server-supabase-heartbeat.timer"
@@ -35,7 +35,7 @@ render_template() {
     -e "s#{{ENV_FILE}}#${ENV_FILE}#g" \
     -e "s#{{STATE_DIR}}#${STATE_DIR}#g" \
     -e "s#{{ON_BOOT_SEC}}#${ON_BOOT_SEC}#g" \
-    -e "s#{{ON_UNIT_ACTIVE_SEC}}#${ON_UNIT_ACTIVE_SEC}#g" \
+    -e "s#{{ON_CALENDAR}}#${ON_CALENDAR}#g" \
     "${template_file}" > "${output_file}"
 }
 
@@ -46,6 +46,8 @@ fi
 if [[ ! -r "${ENV_FILE}" ]]; then
   fail "Supabase heartbeat env file is not readable: ${ENV_FILE}"
 fi
+
+install -d -m 0755 "${STATE_DIR}"
 
 log "Preflighting Supabase heartbeat with ${ENV_FILE}..."
 HOME_SERVER_ENV_FILE="${ENV_FILE}" \
@@ -68,8 +70,8 @@ EOF_SERVICE_DROPIN
 
 cat > "${TMP_DIR}/${TIMER_NAME}.${DROPIN_NAME}" << EOF_TIMER_DROPIN
 [Timer]
-OnUnitActiveSec=
-OnUnitActiveSec=${ON_UNIT_ACTIVE_SEC}
+OnCalendar=
+OnCalendar=${ON_CALENDAR}
 Persistent=true
 AccuracySec=30m
 RandomizedDelaySec=30m
@@ -77,7 +79,6 @@ EOF_TIMER_DROPIN
 
 log "Installing Supabase heartbeat systemd units and production drop-ins..."
 install -d -m 0755 \
-  "${STATE_DIR}" \
   "${SERVICE_DROPIN_DIR}" \
   "${TIMER_DROPIN_DIR}"
 install -m 0644 "${TMP_DIR}/${SERVICE_NAME}" "${SYSTEMD_DIR}/${SERVICE_NAME}"
@@ -99,6 +100,26 @@ if ! systemctl start "${SERVICE_NAME}"; then
 fi
 
 systemctl restart "${TIMER_NAME}"
+
+if ! systemctl is-enabled --quiet "${TIMER_NAME}"; then
+  fail "Supabase heartbeat timer is not enabled after installation."
+fi
+
+if ! systemctl is-active --quiet "${TIMER_NAME}"; then
+  fail "Supabase heartbeat timer is not active after installation."
+fi
+
+next_trigger="$(
+  systemctl show "${TIMER_NAME}" \
+    --property=NextElapseUSecRealtime \
+    --value
+)"
+if [[ -z "${next_trigger}" || "${next_trigger}" == "n/a" ]]; then
+  systemctl status "${TIMER_NAME}" --no-pager || true
+  systemctl list-timers "${TIMER_NAME}" --all --no-pager || true
+  fail "Supabase heartbeat timer has no future activation after restart."
+fi
+
 systemctl status "${TIMER_NAME}" --no-pager
 systemctl list-timers "${TIMER_NAME}" --all --no-pager
-log "Supabase heartbeat installed with interval ${ON_UNIT_ACTIVE_SEC}."
+log "Supabase heartbeat installed with calendar ${ON_CALENDAR}; next activation: ${next_trigger}."
